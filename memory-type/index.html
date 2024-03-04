@@ -23,14 +23,14 @@
 <meta property="og:site_name" content="YWgrit&#39;s blog">
 <meta property="og:description" content="Memory Type什么是Memory Type每个内存区域都有自己的memory type，代表此内存区域的一些特性，例如数据是否会使用cache、访存操作是否可以reorder等等 Linux下可以通过以下命令查看 1cat &#x2F;sys&#x2F;kernel&#x2F;debug&#x2F;x86&#x2F;pat_memtype_list    目前IA32中的memory type如下表所示    Memory Type an">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/media/wx/Data/Books/CPU/notes/memory/pics/cpu_gpu_access.png">
-<meta property="og:image" content="http://example.com/media/wx/Data/Books/CPU/notes/memory/pics/memory_reorder.png">
+<meta property="og:image" content="http://example.com/img/memory_type/cpu_gpu_access.png">
+<meta property="og:image" content="http://example.com/img/memory_type/memory_reorder.png">
 <meta property="article:published_time" content="2024-03-04T14:05:38.000Z">
-<meta property="article:modified_time" content="2024-03-04T14:06:52.161Z">
+<meta property="article:modified_time" content="2024-03-04T14:12:31.742Z">
 <meta property="article:author" content="Yw">
 <meta property="article:tag" content="IA32">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/media/wx/Data/Books/CPU/notes/memory/pics/cpu_gpu_access.png">
+<meta name="twitter:image" content="http://example.com/img/memory_type/cpu_gpu_access.png">
   
   
   
@@ -379,7 +379,7 @@
 <li><p><strong>Strong Uncacheable(UC)</strong> : 对于UC的内存读写操作都不会写到cache里，不会被reordering。</p>
 <ul>
 <li><p>对于memory-mapped I&#x2F;O device，UC很适用。SMP 系统上，各个 CPU 可以通过支持 <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/95435168">cache 一致性协议</a>的总线 snoop 到其他 CPU 对 cache 的读写，而通过 PCIe 连接的 CPU 和 GPU 则不能互相 snoop，如图一所示，因此从 CPU 的角度，显存算是 I&#x2F;O memory，对其访问需要是 uncachable 的（注1）。reordering也会导致I&#x2F;O device读到dirty data，比如说I&#x2F;O device把这些内存作为一些控制用的寄存器使用。</p>
-<p><img src="/../../../../../../../media/wx/Data/Books/CPU/notes/memory/pics/cpu_gpu_access.png" srcset="/img/loading.gif" lazyload alt="cpu_gpu_access">对于普通用途的内存，UC会导致性能的急剧下降。</p>
+<p><img src="/../img/memory_type/cpu_gpu_access.png" srcset="/img/loading.gif" lazyload alt="cpu_gpu_access">对于普通用途的内存，UC会导致性能的急剧下降。</p>
 </li>
 </ul>
 <blockquote>
@@ -402,7 +402,7 @@
 </li>
 </ul>
 <p>上述几种内存属性中，WB理论上性能最好，因为既不会使用cache，又可以reordering</p>
-<p><img src="/../../../../../../../media/wx/Data/Books/CPU/notes/memory/pics/memory_reorder.png" srcset="/img/loading.gif" lazyload alt="memory_reorder"></p>
+<p><img src="/../img/memory_type/memory_reorder.png" srcset="/img/loading.gif" lazyload alt="memory_reorder"></p>
 <p>可以得知，cache和out-of-order并不是两个独立的特性，memory type将他们交织在了一起</p>
 <h1 id="prefetch"><a href="#prefetch" class="headerlink" title="prefetch"></a>prefetch</h1><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">_mm_prefetch(<span class="hljs-type">char</span> <span class="hljs-type">const</span>* p, <span class="hljs-type">int</span> i);<br></code></pre></td></tr></table></figure>
 
