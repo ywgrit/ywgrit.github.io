@@ -26,7 +26,7 @@
 <meta property="og:image" content="http://example.com/img/memory_type/cpu_gpu_access.png">
 <meta property="og:image" content="http://example.com/img/memory_type/memory_reorder.png">
 <meta property="article:published_time" content="2024-03-04T14:05:38.000Z">
-<meta property="article:modified_time" content="2024-03-04T14:12:31.742Z">
+<meta property="article:modified_time" content="2024-03-04T14:16:15.274Z">
 <meta property="article:author" content="Yw">
 <meta property="article:tag" content="IA32">
 <meta name="twitter:card" content="summary_large_image">
@@ -394,9 +394,9 @@
 <p>注2: Speculative read是指读之前并不验证内存的有效性，先冒险的读进来，如果发现不是有效数据再取消读取操作，并更新内存后再读取. 比如说数据还是被buffer在WC buffer中</p>
 </blockquote>
 </li>
-<li><p>**Write back(WB)**：read 和 write 都 cache，在read 或者write miss时，都会同步写入数据到cache中</p>
+<li><p><strong>Write back(WB)</strong>:read 和 write 都 cache，在read 或者write miss时，都会同步写入数据到cache中</p>
 </li>
-<li><p>**Write Through(WT)**：read 时 cache，write hit 时同步写入 cache line 和 main memory，而 write miss 时不分配 cache line（即没有 write allocate），直接写入 memory</p>
+<li><p><strong>Write Through(WT)</strong>:read 时 cache，write hit 时同步写入 cache line 和 main memory，而 write miss 时不分配 cache line（即没有 write allocate），直接写入 memory</p>
 </li>
 <li><p><strong>Write protected(WP)</strong>: 读操作和WT&#x2F;WB没有什么区别，读会被cache. 写不一样，写的时候会在bus上传播这个操作，并且导致其他处理器上的cache lines被更新。主要用于多处理器的情况。WP的内存，在写的时候就会更新其他处理器上的cache,而WB&#x2F;WT类型的内存需要等到其他处理读的时候才会去更形无效的cache</p>
 </li>
