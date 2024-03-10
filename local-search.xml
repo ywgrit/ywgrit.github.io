@@ -4,6 +4,25 @@
   
   
   <entry>
+    <title>io_uring</title>
+    <link href="/io-uring/"/>
+    <url>/io-uring/</url>
+    
+    <content type="html"><![CDATA[<h2 id="动机"><a href="#动机" class="headerlink" title="动机"></a>动机</h2><p>探索scylladb因高效io带来的极速性能，然而并未用上io_uring这一技术。不过无所谓了，如果io_uring在其执行框架seastar前提出，应该就被用上了。</p><h4 id="资料"><a href="#资料" class="headerlink" title="资料"></a>资料</h4><ul><li><p><a href="https://kernel.dk/io_uring.pdf">Efficient IO with io_uring</a></p></li><li><p><a href="https://kernel.dk/io_uring-whatsnew.pdf">What’s new with io_uring</a></p></li><li><p><a href="https://lwn.net/Articles/776703/">Ringing in a new asynchronous I&#x2F;O API</a></p></li><li><p><a href="https://github.com/axboe/liburing">liburing</a></p></li><li><p><a href="https://zhuanlan.zhihu.com/p/334658432">操作系统与存储：解析Linux内核全新异步IO引擎——io_uring设计与实现</a></p></li><li><p><a href="https://mp.weixin.qq.com/s/kaxjfhcbGW5wP442QyWPSg">图解io_uring1</a></p></li><li><p><a href="https://mp.weixin.qq.com/s/1wZpFhwJR-LNkQm-QzFxRQ">图解io_uring2</a></p></li></ul>]]></content>
+    
+    
+    
+    <tags>
+      
+      <tag>Linux_kernel</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>memory type</title>
     <link href="/memory-type/"/>
     <url>/memory-type/</url>
