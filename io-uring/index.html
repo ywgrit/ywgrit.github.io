@@ -31,7 +31,7 @@
 <meta property="og:image" content="http://example.com/img/io_uring/io_rings_complete_structure.png">
 <meta property="og:image" content="http://example.com/img/io_uring/io_uring_with_user.png">
 <meta property="article:published_time" content="2024-03-10T09:43:52.000Z">
-<meta property="article:modified_time" content="2024-03-17T16:00:48.768Z">
+<meta property="article:modified_time" content="2024-03-19T01:00:17.467Z">
 <meta property="article:author" content="Yw">
 <meta property="article:tag" content="Linux kernel">
 <meta name="twitter:card" content="summary_large_image">
@@ -244,7 +244,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          16k 字
+          18k 字
         
       </span>
     
@@ -255,7 +255,7 @@
         
         
         
-          131 分钟
+          147 分钟
         
       </span>
     
@@ -322,6 +322,8 @@
 </li>
 <li><p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/1wZpFhwJR-LNkQm-QzFxRQ">图解io_uring2</a></p>
 </li>
+<li><p><a target="_blank" rel="noopener" href="https://xie.infoq.cn/article/9b07b729101d7abcd5db101ac">Linux IO模式之io_uring</a></p>
+</li>
 </ul>
 <p>nginx把读取文件的操作异步地提交给内核后，内核会通知IO设备独立地执行操作，这样，nginx进程可以继续充分地占用CPU。而且，当大量读事件堆积到IO设备的队列中时，将会发挥出内核中“电梯算法”的优势，从而降低随机读取磁盘扇区的成本。</p>
 <h2 id="AIO的缺陷"><a href="#AIO的缺陷" class="headerlink" title="AIO的缺陷"></a>AIO的缺陷</h2><p>但是它仍然不够完美，同样存在很多缺陷，还是以nginx为例，目前，nginx仅支持在读取文件时使用AIO，因为正常写入文件往往是写入内存就立刻返回，即只支持Direct write，效率很高，如果替换成AIO写入速度会明显下降。</p>
@@ -352,8 +354,27 @@
 
 <p>下面分析关键流程。</p>
 <h3 id="io-uring准备阶段"><a href="#io-uring准备阶段" class="headerlink" title="io_uring准备阶段"></a>io_uring准备阶段</h3><p>io_uring通过io_uring_setup完成准备阶段。</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">io_uring_setup</span><span class="hljs-params">(u32 entries, <span class="hljs-keyword">struct</span> io_uring_params *p)</span></span>;<br></code></pre></td></tr></table></figure>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">io_uring_setup</span><span class="hljs-params">(u32 entries, <span class="hljs-keyword">struct</span> io_uring_params *p)</span></span>;<br><br><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Passed in for io_uring_setup(2). Copied back with updated info on success</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">io_uring_params</span> &#123;<br>	__u32 sq_entries;<br>	__u32 cq_entries;<br>	__u32 flags;<br>	__u32 sq_thread_cpu;<br>	__u32 sq_thread_idle;<br>	__u32 features;<br>	__u32 wq_fd;<br>	__u32 resv[<span class="hljs-number">3</span>];<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">io_sqring_offsets</span> sq_off;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">io_cqring_offsets</span> cq_off;<br>&#125;;<br></code></pre></td></tr></table></figure>
 
+<p>flags中比较重要的有</p>
+<ul>
+<li><p>IORING_SETUP_IOPOLL</p>
+<ul>
+<li>io_uring 会使用轮询的方式执行所有的操作</li>
+</ul>
+</li>
+<li><p>IORING_SETUP_SQPOLL</p>
+<ul>
+<li>io_uring 会创建一个内核线程专门用来收割用户提交的任务</li>
+</ul>
+</li>
+<li><p>IORING_SETUP_SQ_AFF</p>
+</li>
+<li><p>IORING_SETUP_CLAMP</p>
+</li>
+<li><p>IORING_SETUP_SINGLE_ISSUER</p>
+</li>
+</ul>
 <p>SQ中<strong>至少</strong>包含entries个元素</p>
 <p>io_uring_setup系统调用的过程就是初始化相关数据结构，建立好对应的缓存区，然后通过系统调用的参数io_uring_params结构传递回去，告诉核外环内存地址在哪，起始指针的地址在哪等关键的信息。</p>
 <p>需要初始化内存的内存分为三个区域，分别是SQ，CQ，SQEs。内核初始化SQ和CQ，SQ和CQ都是ring，此外，提交请求在SQ，CQ之间有一个间接数组，即内核提供了一个Submission Queue Entries（SQEs）数组。之所以额外采用了一个数组保存SQEs，是为了方便通过环形缓冲区提交内存上不连续的请求。SQ和CQ中每个节点保存的都是SQEs数组的索引，而不是实际的请求，实际的请求只保存在SQEs数组中。这样在提交请求时，就可以<strong>批量提交一组SQEs上不连续的请求。</strong></p>
@@ -392,6 +413,17 @@
 <p>sq_array其实并不是很适用，所以内核有个选项可以禁用sq_array，<a target="_blank" rel="noopener" href="https://patchwork.kernel.org/project/io-uring/patch/0672f81d64ffe9f91835e240d8fef7a72bd895ec.1692119257.git.asml.silence@gmail.com/#25478281">参考</a></p>
 <p>基本上在任何位置只需要能持有io_ring_ctx和io_uring_params就可以找到任何数据所在的位置</p>
 <h3 id="IO提交"><a href="#IO提交" class="headerlink" title="IO提交"></a>IO提交</h3><p>io_uring提供了submission offload模式，使得提交过程完全不需要进行系统调用。当程序在用户态设置完SQE，并通过修改SQ的tail完成一次插入时，如果此时SQ线程处于唤醒状态，那么可以立刻捕获到这次提交，这样就避免了用户程序调用io_uring_enter。如上所说，如果SQ线程处于休眠状态，则需要通过使用IORING_SQ_NEED_WAKEUP标志位调用io_uring_enter来唤醒SQ线程。</p>
+<p>在初始化完成之后，应用程序就可以使用这些队列来添加 IO 请求，即填充 SQE。当请求都加入 SQ 后，应用程序还需要某种方式告诉内核，生产的请求待消费，这就是提交 IO 请求。</p>
+<p>IO 提交的做法是找到一个空闲的 SQE，根据请求设置 SQE，并将这个 SQE 的索引放到 SQ 中。SQ 是一个典型的 RingBuffer，有 head，tail 两个成员，如果 head &#x3D;&#x3D; tail，意味着队列为空。SQE 设置完成后，需要修改 SQ 的 tail，以表示向 RingBuffer 中插入一个请求，当所有请求都加入 SQ 后，就可以使用相关接口 io_uring_enter（）来提交 IO 请求。</p>
+<p>io_uring 提供了 io_uring_enter 这个系统调用接口，用于通知内核 IO 请求的产生以及等待内核完成请求。为了在追求极致 IO 性能的场景下获得最高性能，io_uring 还支持了轮询模式，轮询模式有两种使用场景，一种是提交 IO 过程的轮询模式这是通过设置 IORING_SETUP_SQPOLL 来开启；另外一种是收割 IO 过程的轮询模式，通过设置 IORING_SETUP_IOPOLL 来开启。</p>
+<h4 id="提交-IO-的轮询机制"><a href="#提交-IO-的轮询机制" class="headerlink" title="提交 IO 的轮询机制"></a>提交 IO 的轮询机制</h4><p>为了提升性能，内核提供了轮询的方式来提交 IO 请求，在初始化阶段通过设置 io_uring 的相关标志位 IORING_SETUP_SQPOLL 可以开启该机制。</p>
+<p>在设置 IORING_SETUP_SQPOLL 模式下， 内核会额外启动一个内核线程（在io_uring_setup函数执行完后），我们称作 SQ 线程。这个内核线程可以运行在某个指定的 core 上（通过 sq_thread_cpu 配置）。这个内核线程会不停的 Poll SQ，除非在一段时间内没有 Poll 到任何请求（通过 sq_thread_idle 配置），才会被挂起。</p>
+<p>当程序在用户态设置完 SQE，并通过修改 SQ 的 tail 完成一次插入时，如果此时 SQ 线程处于唤醒状态，那么可以立刻捕获到这次提交，这样就避免了用户程序调用 io_uring_enter 这个系统调用。如果 SQ 线程处于休眠状态，则需要通过调用 io_uring_enter，并使用 IORING_ENTER_SQ_WAKEUP 参数，来唤醒 SQ 线程。用户态可以通过 sqring 的 flags 变量获取 SQ 线程的状态。</p>
+<p>在提交 IO 的时候，如果出现了没有空闲的 SEQ entry 来提交新的请求的时候，应用程序不知道什么时候有空闲的情况，只能不断重试。为解决这种场景的问题，可以在调用 io_uring_enter 的时候设置 IORING_ENTER_SQ_WAIT 标志位，当提交新请求的时候，它会等到至少有一个新的 SQ entry 能使用的时候才返回。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">io_uring_enter</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> fd, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> to_submit, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> min_complete, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> flags, <span class="hljs-type">sigset_t</span> *sig)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>如果 <code>flags</code> 字段设置了 <em>IORING_ENTER_GETEVENTS</em>，调用会等待 <code>min_complete</code> 个 IO 完成后才返回。</p>
+<p>min_complete 为 0，调用会立即完成，并返回已经完成的 IO，如果 min_complete 不为 0，并且 io_uring 设置了 IORING_SETUP_IOPOLL，那么调用通过忙等待的方式等待 min_complete 个 IO 完成事件，否则调用会挂起等待 IO 中断（或信号）</p>
 <h2 id="patch"><a href="#patch" class="headerlink" title="patch"></a>patch</h2><p>目前io_uring_create中，检查sq-&gt;entries和cq_entries的代码有冗余，将其写为一个函数，可以参考如下函数</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title function_">io_validate_ext_arg</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> flags, <span class="hljs-type">const</span> <span class="hljs-type">void</span> __user *argp, <span class="hljs-type">size_t</span> argsz)</span><br>&#123;<br>	<span class="hljs-keyword">if</span> (flags &amp; IORING_ENTER_EXT_ARG) &#123;<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_getevents_arg</span> <span class="hljs-title">arg</span>;</span><br><br>		<span class="hljs-keyword">if</span> (argsz != <span class="hljs-keyword">sizeof</span>(arg))<br>			<span class="hljs-keyword">return</span> -EINVA<br>		<span class="hljs-keyword">if</span> (copy_from_user(&amp;arg, argp, <span class="hljs-keyword">sizeof</span>(arg)))<br>			<span class="hljs-keyword">return</span> -EFAULT;<br>	&#125;<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
 
