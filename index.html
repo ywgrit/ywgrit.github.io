@@ -241,14 +241,14 @@
       <h1 class="index-header">
         
         <a href="/io-uring-%E5%AE%9E%E7%8E%B0/" target="_self">
-          io_uring 实现
+          io_uring api
         </a>
       </h1>
 
       
       <a class="index-excerpt index-excerpt__noimg" href="/io-uring-%E5%AE%9E%E7%8E%B0/" target="_self">
         <div>
-          
+          动机探索scylladb因高效io带来的极速性能，然而并未用上io_uring这一技术。不过无所谓了，如果io_uring在其执行框架seastar前提出，应该就被用上了。 资料 Efficient IO with io_uring  What’s new with io_uring  Ringing in a new asynchronous I&#x2F;O API  liburing  操作
         </div>
       </a>
 
@@ -262,6 +262,27 @@
           </div>
         
         
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Linux-kernel/" class="category-chain-item">Linux kernel</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
         
       </div>
     </article>
@@ -273,15 +294,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/io-uring-api/" target="_self">
+        <a href="/io-uring-api-%E5%8F%8A%E5%AE%9E%E7%8E%B0/" target="_self">
           io_uring api
         </a>
       </h1>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/io-uring-api/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/io-uring-api-%E5%8F%8A%E5%AE%9E%E7%8E%B0/" target="_self">
         <div>
-          动机探索scylladb因高效io带来的极速性能，然而并未用上io_uring这一技术。不过无所谓了，如果io_uring在其执行框架seastar前提出，应该就被用上了。 资料 Efficient IO with io_uring  What’s new with io_uring  Ringing in a new asynchronous I&#x2F;O API  liburing  操作
+          api数据结构定义好了，逻辑实现具体是如何驱动这些数据结构的呢？使用上，大体分为准备、提交、收割过程。 linux kernel仅仅提供了三个系统调用，简化了异步io的操作 12345678910// 初始化一个新的 io_uring 上下文，注册io_uring实例，包括注册共享内存等int io_uring_setup(u32 entries, struct io_uring_params *
         </div>
       </a>
 

@@ -1,0 +1,782 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Yw">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="api数据结构定义好了，逻辑实现具体是如何驱动这些数据结构的呢？使用上，大体分为准备、提交、收割过程。 linux kernel仅仅提供了三个系统调用，简化了异步io的操作 12345678910&#x2F;&#x2F; 初始化一个新的 io_uring 上下文，注册io_uring实例，包括注册共享内存等int io_uring_setup(u32 entries, struct io_uring_params *">
+<meta property="og:type" content="article">
+<meta property="og:title" content="io_uring api">
+<meta property="og:url" content="http://example.com/io-uring-api-%E5%8F%8A%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="YWgrit&#39;s blog">
+<meta property="og:description" content="api数据结构定义好了，逻辑实现具体是如何驱动这些数据结构的呢？使用上，大体分为准备、提交、收割过程。 linux kernel仅仅提供了三个系统调用，简化了异步io的操作 12345678910&#x2F;&#x2F; 初始化一个新的 io_uring 上下文，注册io_uring实例，包括注册共享内存等int io_uring_setup(u32 entries, struct io_uring_params *">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/io_uring/code_analysis/io_uring_setup.png">
+<meta property="article:published_time" content="2024-03-26T11:38:18.000Z">
+<meta property="article:modified_time" content="2024-03-26T15:41:19.840Z">
+<meta property="article:author" content="Yw">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/img/io_uring/code_analysis/io_uring_setup.png">
+  
+  
+  
+  <title>io_uring api - YWgrit&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"5Y31g5NDiF0gUogzdo3OAR8R-gzGzoHsz","app_key":"NuoZXWIUAbytcPcTM1i0PuPq","server_url":"https://5y31g5nd.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Ywgrit</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="io_uring api"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-03-26 19:38" pubdate>
+          2024年3月26日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          13k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          106 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">io_uring api</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="api"><a href="#api" class="headerlink" title="api"></a>api</h1><p>数据结构定义好了，逻辑实现具体是如何驱动这些数据结构的呢？使用上，大体分为准备、提交、收割过程。</p>
+<p>linux kernel仅仅提供了三个系统调用，简化了异步io的操作</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-comment">// 初始化一个新的 io_uring 上下文，注册io_uring实例，包括注册共享内存等</span><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">io_uring_setup</span><span class="hljs-params">(u32 entries, <span class="hljs-keyword">struct</span> io_uring_params *p)</span></span>;<br><br><span class="hljs-comment">// 提交IO任务以及收割IO完成事件</span><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">io_uring_enter</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> fd, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> to_submit,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> min_complete, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> flags,</span></span><br><span class="hljs-params"><span class="hljs-function">                   <span class="hljs-type">sigset_t</span> *sig)</span></span>;<br><br><span class="hljs-comment">// 注册用户态和内核态的共享buffer或者文件，对共享内存或者内部数据结构长期持有，减少IO开销</span><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">io_uring_register</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> fd, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> opcode, <span class="hljs-type">void</span> *arg, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> nr_args)</span></span>;<br></code></pre></td></tr></table></figure>
+
+
+
+<h1 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h1><h2 id="io-uring-setup"><a href="#io-uring-setup" class="headerlink" title="io_uring_setup"></a>io_uring_setup</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>io_uring通过io_uring_setup完成准备阶段，初始化io_uring实例，包括</p>
+<ul>
+<li><p>分配共享内存，该内存交由kernel管理</p>
+</li>
+<li><p>初始化各个数据结构，如io_ring_ctx、io_rings、两个io_uring（sq和cq分别有一个）</p>
+</li>
+<li><p>注册包含io_ring_ctx的文件，应用程序通过该文件的fd来获取io_ring_ctx，从而访问io_uring实例</p>
+</li>
+<li><p>处理应用程序指定的flags相关的事宜，如SQ thread</p>
+</li>
+</ul>
+<p>接口如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">io_uring_setup</span><span class="hljs-params">(u32 entries, <span class="hljs-keyword">struct</span> io_uring_params *p)</span>;<br><br><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Passed in for io_uring_setup(2). Copied back with updated info on success</span><br><span class="hljs-comment"> */</span><br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_params</span> &#123;</span><br>	__u32 sq_entries;<br>	__u32 cq_entries;<br>	__u32 flags;<br>	__u32 sq_thread_cpu;<br>	__u32 sq_thread_idle;<br>	__u32 features;<br>	__u32 wq_fd;<br>	__u32 resv[<span class="hljs-number">3</span>];<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_sqring_offsets</span> <span class="hljs-title">sq_off</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_cqring_offsets</span> <span class="hljs-title">cq_off</span>;</span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>其中，比较重要的flags有</p>
+<ul>
+<li><p>IORING_SETUP_IOPOLL</p>
+<ul>
+<li><del>让内核采用 Polling 的模式收割Block层的请求。在收割IO时，以忙等待的方式，而不是异步中断通知（Interrupt Request）的方式，即应用程序需要不断调用io_uring_enter轮询设备来检查io是否完成。因此相比于IRQ，会消耗更多的cpu资源，但IO操作的延迟更低。该种方式需要依靠打开文件的时候，设置为 O_DIRECT 的标记。</del><strong>我没弄懂</strong></li>
+<li>猜测：<ul>
+<li>在IOPOLL启用时，会依靠轮询的方式收割block层的请求</li>
+<li>如果在IOPOLL开启后，SQPOLL也开启了，那么用户在收割完成事件时也不用阻塞了，SQ thread会处理该事情</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>IORING_SETUP_SQPOLL</p>
+<ul>
+<li>内核额外启用一个内核线程，称为SQ线程。这个内核线程可以运行在某个指定的 core 上（通过 sq_thread_cpu 配置）。这个内核线程会不停的 Poll SQ，除非在一段时间内没有 Poll 到任何请求（通过 sq_thread_idle 配置），才会被挂起。SQ线程不仅会处理IO提交，也会处理IO完成事件</li>
+</ul>
+</li>
+<li><p>IORING_SETUP_SINGLE_ISSUER</p>
+<ul>
+<li>只能有一个线程提交任务</li>
+</ul>
+</li>
+<li><p>IORING_SETUP_DEFER_TASKRUN</p>
+<ul>
+<li>在异步任务中，可能存在这种情况：在异步IO任务A提交后，该任务会加入到task work queue中，当cpu正在运行某个非常重要的任务B时，IO任务A可能从 task work queue中被调度出来，挤掉任务B的执行，导致这个非常重要的任务B的执行延迟变大，即执行时间增加。通过在io_uring_setup中设置IORING_SETUP_DEFER_TASKRUN，使得我们可以在用户调用io_uring_enter，并且带上<strong>IORING_ENTER_GETEVENTS</strong>时，才开始执行这些异步任务，例如IO任务A。这样就避免这些异步任务中断其他正在运行的任务。</li>
+</ul>
+</li>
+</ul>
+<h3 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h3><p>io_uring_setup系统调用的过程就是初始化相关数据结构，建立好对应的缓存区，然后通过系统调用的参数io_uring_params结构传递回去，告诉核外环内存地址在哪，起始指针的地址在哪等关键的信息。</p>
+<p>需要初始化内存的内存分为三个区域，分别是SQ，CQ，SQEs。内核初始化SQ和CQ，SQ和CQ都是ring，此外，提交请求在SQ，CQ之间有一个间接数组，即内核提供了一个Submission Queue Entries（SQEs）数组。</p>
+<p>io_uring_setup的逻辑可以分为以下三部分</p>
+<ul>
+<li>创建一个上下文结构io_ring_ctx用来管理整个会话。</li>
+<li>根据io_uring_params-&gt;sq_off&#x2F;cq_off偏移量来实现SQ和CQ内存区的映射</li>
+<li>错误检查、权限检查、资源配额检查等检查逻辑。</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Sets up an aio uring context, and returns the fd. Applications asks for a</span><br><span class="hljs-comment"> * ring size, we return the actual sq/cq ring sizes (among other things) in the</span><br><span class="hljs-comment"> * params structure passed in.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-type">static</span> <span class="hljs-type">long</span> <span class="hljs-title function_">io_uring_setup</span><span class="hljs-params">(u32 entries, <span class="hljs-keyword">struct</span> io_uring_params __user *params)</span><br>&#123;<br>	<span class="hljs-comment">// 检查params各成员是否valid</span><br><br>	<span class="hljs-keyword">return</span> io_uring_create(entries, &amp;p, params);<br>&#125;<br><br><br><span class="hljs-comment">// 真正执行setup的函数io_uring_create</span><br><span class="hljs-type">static</span> __cold <span class="hljs-type">int</span> <span class="hljs-title function_">io_uring_create</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> entries, <span class="hljs-keyword">struct</span> io_uring_params *p,</span><br><span class="hljs-params">				  <span class="hljs-keyword">struct</span> io_uring_params __user *params)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_ring_ctx</span> *<span class="hljs-title">ctx</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_task</span> *<span class="hljs-title">tctx</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">file</span> *<span class="hljs-title">file</span>;</span><br>	<span class="hljs-type">int</span> ret;<br><br>	<span class="hljs-comment">// 检查p-&gt;flags的合法性</span><br>    ...<br><br>	<span class="hljs-comment">// 设置p-&gt;sq_entries和p-&gt;cq_entries，必须是2的幂次</span><br>	...<br><br>    <span class="hljs-comment">// 创建io_ring_ctx，为io_ring_ctx分配内存</span><br>	ctx = io_ring_ctx_alloc(p);<br>	<br>    <br>    <span class="hljs-comment">// 设置io_ring_ctx的flag</span><br>    ...<br>        <br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * When SETUP_IOPOLL and SETUP_SQPOLL are both enabled, user</span><br><span class="hljs-comment">	 * space applications don&#x27;t need to do io completion events</span><br><span class="hljs-comment">	 * polling again, they can rely on io_sq_thread to do polling</span><br><span class="hljs-comment">	 * work, which can reduce cpu usage and uring_lock contention.</span><br><span class="hljs-comment">	 */</span><br>    <br>    <br>	<br>	<span class="hljs-comment">// 分配内存，为io_rings、cqes、sqs这三个紧邻的结构以及sqes分配内存</span><br>    <span class="hljs-comment">// allocate memory if app haven&#x27;t, otherwise just map. </span><br>    <span class="hljs-comment">// The size = sizeof(io_rings) + p-&gt;cq_entries * sizeof(io_uring_cqe) + p-&gt;sq_entries * sizeof(u32) + p-&gt;sq_entries * sizeof(io_uring_sqe)</span><br>    <span class="hljs-comment">// 申请io_rings SQEs</span><br>	ret = io_allocate_scq_urings(ctx, p);<br>	<br><br>    <span class="hljs-comment">// 处理poll模式的逻辑，包括初始化SQpoll内核线程</span><br>	ret = io_sq_offload_create(ctx, p);<br><br>    <br><br>	<span class="hljs-comment">// 创建io_ring_ctx对应的file，之后用户需要这个file来访问io_ring_ctx</span><br>	file = io_uring_get_file(ctx);<br>&#125;<br><br><br><br><span class="hljs-comment">// 其中，我们对cq/sq可以进行的操作如下所示，在io_uring_get_file函数中，此结构会被放入到file-&gt;f_op中</span><br><span class="hljs-type">static</span> <span class="hljs-type">const</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">file_operations</span> <span class="hljs-title">io_uring_fops</span> =</span> &#123;<br>	.release	= io_uring_release,<br>	.mmap		= io_uring_mmap,<br><span class="hljs-meta">#<span class="hljs-keyword">ifndef</span> CONFIG_MMU</span><br>	.get_unmapped_area = io_uring_nommu_get_unmapped_area,<br>	.mmap_capabilities = io_uring_nommu_mmap_capabilities,<br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br>	.get_unmapped_area = io_uring_mmu_get_unmapped_area,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	.poll		= io_uring_poll,<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_PROC_FS</span><br>	.show_fdinfo	= io_uring_show_fdinfo,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br><br><br><span class="hljs-comment">// io_uring_mmap的核心实现如下所示</span><br><span class="hljs-comment">// ctx存放于file中，通过offset获取ctx的各成员，以访问ctx-&gt;rings、cqes、sqes</span><br><span class="hljs-comment">// 即应用程序获取到file的fd后，通过对该file进行mmap，并传入指定的offset，即可访问ctx-&gt;rings、cqes、sqes</span><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title function_">io_uring_validate_mmap_request</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> file *file,</span><br><span class="hljs-params">					    <span class="hljs-type">loff_t</span> pgoff, <span class="hljs-type">size_t</span> sz)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_ring_ctx</span> *<span class="hljs-title">ctx</span> =</span> file-&gt;private_data;<br>	<span class="hljs-type">loff_t</span> offset = pgoff &lt;&lt; PAGE_SHIFT;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">page</span> *<span class="hljs-title">page</span>;</span><br>	<span class="hljs-type">void</span> *ptr;<br><br>	<span class="hljs-comment">/* Don&#x27;t allow mmap if the ring was setup without it */</span><br>	<span class="hljs-keyword">if</span> (ctx-&gt;flags &amp; IORING_SETUP_NO_MMAP)<br>		<span class="hljs-keyword">return</span> ERR_PTR(-EINVAL);<br><br>	<span class="hljs-keyword">switch</span> (offset &amp; IORING_OFF_MMAP_MASK) &#123;<br>	<span class="hljs-keyword">case</span> IORING_OFF_SQ_RING:<br>	<span class="hljs-keyword">case</span> IORING_OFF_CQ_RING:<br>		ptr = ctx-&gt;rings;<br>		<span class="hljs-keyword">break</span>;<br>	<span class="hljs-keyword">case</span> IORING_OFF_SQES:<br>		ptr = ctx-&gt;sq_sqes;<br>		<span class="hljs-keyword">break</span>;<br>	<span class="hljs-keyword">case</span> IORING_OFF_PBUF_RING: &#123;<br>		<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> bgid;<br><br>		bgid = (offset &amp; ~IORING_OFF_MMAP_MASK) &gt;&gt; IORING_OFF_PBUF_SHIFT;<br>		mutex_lock(&amp;ctx-&gt;uring_lock);<br>		ptr = io_pbuf_get_address(ctx, bgid);<br>		mutex_unlock(&amp;ctx-&gt;uring_lock);<br>		<span class="hljs-keyword">if</span> (!ptr)<br>			<span class="hljs-keyword">return</span> ERR_PTR(-EINVAL);<br>		<span class="hljs-keyword">break</span>;<br>		&#125;<br>	<span class="hljs-keyword">default</span>:<br>		<span class="hljs-keyword">return</span> ERR_PTR(-EINVAL);<br>	&#125;<br><br>	page = virt_to_head_page(ptr);<br>	<span class="hljs-keyword">if</span> (sz &gt; page_size(page))<br>		<span class="hljs-keyword">return</span> ERR_PTR(-EINVAL);<br><br>	<span class="hljs-keyword">return</span> ptr;<br>&#125;<br><br><span class="hljs-comment">/*</span><br><span class="hljs-comment"> * Magic offsets(byte-based) for the application to mmap the data it needs</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OFF_SQ_RING			0ULL</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OFF_CQ_RING			0x8000000ULL</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OFF_SQES				0x10000000ULL</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OFF_PBUF_RING		0x80000000ULL</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OF`F_PBUF_SHIFT		16</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> IORING_OFF_MMAP_MASK		0xf8000000ULL</span><br></code></pre></td></tr></table></figure>
+
+<p>如下图所示，io_uring_setup的主要功能由以下四个函数提供</p>
+<p><img src="/../img/io_uring/code_analysis/io_uring_setup.png" srcset="/img/loading.gif" lazyload alt="io_uring_setup"></p>
+<ul>
+<li><p>io_ring_ctx_alloc，主要用来申请空间，初始化列表头、互斥锁、自旋锁等结构</p>
+</li>
+<li><p>io_allocate_scq_urings，初始化整个<code>struct io_rings *rings</code>，包括<code>SQ/CQ</code>头尾指针、<code>SQE</code>、<code>CQE</code></p>
+<ul>
+<li><p><code>SQ</code>、<code>CQ</code> 头尾指针以及 <code>CQE</code> 都在 <code>struct io_rings *rings</code> 结构体中</p>
+</li>
+<li><p><code>SQE</code> 则是在 <code>struct io_ring_ctx *ctx</code> 结构体中</p>
+</li>
+</ul>
+</li>
+<li><p>io_sq_offload_create，根据用户通过 <code>io_uring_setup</code> 传递的 <code>flags</code> 来配置 <code>io_uring</code> 的运行方式</p>
+</li>
+<li><p>io_uring_get_fd 将 <code>struct io_ring_ctx *ctx</code> 暴露给用户态访问</p>
+</li>
+</ul>
+<h4 id="io-sq-offload-create"><a href="#io-sq-offload-create" class="headerlink" title="io_sq_offload_create"></a><strong>io_sq_offload_create</strong></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs c">__cold <span class="hljs-type">int</span> <span class="hljs-title function_">io_sq_offload_create</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> io_ring_ctx *ctx,</span><br><span class="hljs-params">				<span class="hljs-keyword">struct</span> io_uring_params *p)</span><br>&#123;<br>	<span class="hljs-comment">/* Retain compatibility with failing for an invalid attach attempt */</span><br>    <span class="hljs-comment">// 检查是否和另外一个io_uring共享 SQ thread</span><br>    ...<br><br>	<span class="hljs-keyword">if</span> (ctx-&gt;flags &amp; IORING_SETUP_SQPOLL) &#123;<br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">task_struct</span> *<span class="hljs-title">tsk</span>;</span> <span class="hljs-comment">// SQ thread</span><br>		<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_sq_data</span> *<span class="hljs-title">sqd</span>;</span><br><br>		<span class="hljs-comment">// sqd存放SQ thread的相关信息</span><br>		sqd = io_get_sq_data(p, &amp;attached);<br>	<br><br>		<span class="hljs-comment">// 设置ctx中SQ thread相关的信息</span><br>        ...<br>		<span class="hljs-comment">// 检查是否需要将SQ thread绑定到指定的cpu上</span><br>        ...<br>        <br>        <span class="hljs-comment">// 创建 SQ thread</span><br>		tsk = create_io_thread(io_sq_thread, sqd, NUMA_NO_NODE);<br>        <br>        <span class="hljs-comment">// 例行操作，开启线程</span><br>		wake_up_new_task(tsk);<br>		<span class="hljs-keyword">if</span> (ret)<br>			<span class="hljs-keyword">goto</span> err;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="io-uring-enter"><a href="#io-uring-enter" class="headerlink" title="io_uring_enter"></a>io_uring_enter</h2><h3 id="简介-1"><a href="#简介-1" class="headerlink" title="简介"></a>简介</h3><p>通过使用io_uring_setup初始化的io_uring实例，io_uring_enter既可以提交IO请求，又可以收割IO完成事件。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">io_uring_enter</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> fd, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> to_submit,</span><br><span class="hljs-params">                   <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> min_complete, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> flags,</span><br><span class="hljs-params">                   <span class="hljs-type">sigset_t</span> *sig)</span>;<br></code></pre></td></tr></table></figure>
+
+<p>比较重要的flags如下</p>
+<ul>
+<li><p>IORING_ENTER_GETEVENTS</p>
+<ul>
+<li>设置该flag后，io_uring_enter会收割至少min_complete个完成事件，否则会阻塞。当to_submit也设置了时，io_uring_enter既可以提交IO请求，又可以收割IO完成事件</li>
+</ul>
+</li>
+<li><p>IORING_ENTER_SQ_WAKEUP</p>
+<ul>
+<li>如果在io_uring_setup系统调用中，设置了**IORING_SETUP_SQPOLL **flag，即使用了SQ thread，那么sq ring中在长时间未有IO请求时，SQ thread会休眠，设置此flag后会唤醒SQ thread</li>
+</ul>
+</li>
+<li><p>IORING_ENTER_SQ_WAIT</p>
+<ul>
+<li>在设置了<strong>IORING_SETUP_SQPOLL</strong> flag后，SQ thread会处理sqes上的IO请求，那么应用程序就不知道sqes中是否还有空闲位置来提交IO请求，因此有可能在通过io_uring_enter来提交IO请求时，sqes中并没有空闲位置，那么此时就需要等待，直到有IO请求被内核处理，留出来空闲位置后，io_uring_enter才能返回</li>
+</ul>
+</li>
+<li><p>IORING_ENTER_REGISTERED_RING</p>
+<ul>
+<li>如果在多线程模式下，用io_uring_setup注册了一个io_uring实例，那么io_uring对应的file会被多个线程共享，因此在访问io_uring file对应的fd时，需要记录和设置其引用计数。例如，每次io_uring_enter前后都需要调用fdget&#x2F;fdput，这样严重增大了开销。一种解决办法是将io_uring fd通过io_uring_register注册到current-&gt;io_uring_task-&gt;registered_rings中，之后便可通过该成员获取fd，不用处理fd的引用计数了。当启用此方法时，设置IORING_ENTER_REGISTERED_RING表示io_uring_enter中传入的fd不是真实的文件描述符，而是current-&gt;io_uring_task-&gt;registered_rings中的index。通过该index即可获取到对应的io_uring fd</li>
+</ul>
+</li>
+</ul>
+<h3 id="源码-1"><a href="#源码-1" class="headerlink" title="源码"></a>源码</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// 处理submit和completion相关事件</span><br>SYSCALL_DEFINE6(io_uring_enter, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>, fd, u32, to_submit,<br>		u32, min_complete, u32, flags, <span class="hljs-type">const</span> <span class="hljs-type">void</span> __user *, argp,<br>		<span class="hljs-type">size_t</span>, argsz)<br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_ring_ctx</span> *<span class="hljs-title">ctx</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">file</span> *<span class="hljs-title">file</span>;</span><br>	<span class="hljs-type">long</span> ret;<br><br><br>	<span class="hljs-comment">// 根据fd找到对应的file，再根据file得到io_ring_ctx</span><br>	...<br>	ctx = file-&gt;private_data;<br>    <br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * For SQ polling, the thread will do all submissions and completions.</span><br><span class="hljs-comment">	 * Just return the requested submit count, and wake the thread if</span><br><span class="hljs-comment">	 * we were asked to.</span><br><span class="hljs-comment">	 */</span><br>	<span class="hljs-keyword">if</span> (ctx-&gt;flags &amp; IORING_SETUP_SQPOLL) &#123;<br>		<span class="hljs-keyword">if</span> (flags &amp; IORING_ENTER_SQ_WAKEUP)<br>			wake_up(&amp;ctx-&gt;sq_data-&gt;wait);<br>		<span class="hljs-keyword">if</span> (flags &amp; IORING_ENTER_SQ_WAIT)<br>			io_sqpoll_wait_sq(ctx); <span class="hljs-comment">// current一直等待，直到sq_rings非满时</span><br><br>		ret = to_submit;<br>	&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (to_submit) &#123;<br>		ret = io_uring_add_tctx_node(ctx);<br><br>		mutex_lock(&amp;ctx-&gt;uring_lock);<br>		ret = io_submit_sqes(ctx, to_submit); <span class="hljs-comment">// 最后是通过io_queue_sqe来提交sqe的</span><br><br>		<span class="hljs-keyword">if</span> (flags &amp; IORING_ENTER_GETEVENTS) &#123; <span class="hljs-comment">// 处理completion事件</span><br>			<span class="hljs-keyword">if</span> (ctx-&gt;syscall_iopoll)<br>				<span class="hljs-keyword">goto</span> iopoll_locked;<br>			<span class="hljs-comment">/*</span><br><span class="hljs-comment">			 * Ignore errors, we&#x27;ll soon call io_cqring_wait() and</span><br><span class="hljs-comment">			 * it should handle ownership problems if any.</span><br><span class="hljs-comment">			 */</span><br>			<span class="hljs-keyword">if</span> (ctx-&gt;flags &amp; IORING_SETUP_DEFER_TASKRUN) <span class="hljs-comment">// 暂时不执行sqe，等到某一次调用io_uring_enter时，再统一执行多个sqes</span><br>				(<span class="hljs-type">void</span>)io_run_local_work_locked(ctx, min_complete); <span class="hljs-comment">// The reason execute this line not in 3694 line is it needs get locked. Keep task work local to a io_ring_ctx, rather than to the submission task.</span><br>		&#125;<br>		mutex_unlock(&amp;ctx-&gt;uring_lock);<br>	&#125;<br><br>    <span class="hljs-comment">// 处理completion事件</span><br>	<span class="hljs-keyword">if</span> (flags &amp; IORING_ENTER_GETEVENTS) &#123;<br>		<span class="hljs-type">int</span> ret2;<br>		<br>        <span class="hljs-comment">// 未启用sq thread，但是启用了iopoll</span><br>		<span class="hljs-keyword">if</span> (ctx-&gt;syscall_iopoll) &#123;<br>			<span class="hljs-comment">/*</span><br><span class="hljs-comment">			 * We disallow the app entering submit/complete with</span><br><span class="hljs-comment">			 * polling, but we still need to lock the ring to</span><br><span class="hljs-comment">			 * prevent racing with polled issue that got punted to</span><br><span class="hljs-comment">			 * a workqueue.</span><br><span class="hljs-comment">			 */</span><br>			mutex_lock(&amp;ctx-&gt;uring_lock);<br>iopoll_locked:<br>			ret2 = io_validate_ext_arg(flags, argp, argsz);<br>			<span class="hljs-keyword">if</span> (likely(!ret2)) &#123;<br>				min_complete = min(min_complete,<br>						   ctx-&gt;cq_entries);<br>				ret2 = io_iopoll_check(ctx, min_complete);<br>			&#125;<br>			mutex_unlock(&amp;ctx-&gt;uring_lock);<br>		&#125; <span class="hljs-keyword">else</span> &#123; <span class="hljs-comment">// 一直等待cq_ring</span><br>			<span class="hljs-type">const</span> <span class="hljs-type">sigset_t</span> __user *sig;<br>			<span class="hljs-class"><span class="hljs-keyword">struct</span> __<span class="hljs-title">kernel_timespec</span> __<span class="hljs-title">user</span> *<span class="hljs-title">ts</span>;</span><br><br>			ret2 = io_get_ext_arg(flags, argp, &amp;argsz, &amp;ts, &amp;sig);<br>			<span class="hljs-keyword">if</span> (likely(!ret2)) &#123;<br>				min_complete = min(min_complete,<br>						   ctx-&gt;cq_entries);<br>				ret2 = io_cqring_wait(ctx, min_complete, sig,<br>						      argsz, ts);<br>			&#125;<br>		&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<h2 id="io-uring-register"><a href="#io-uring-register" class="headerlink" title="io_uring_register"></a>io_uring_register</h2><h3 id="简介-2"><a href="#简介-2" class="headerlink" title="简介"></a>简介</h3><p>主要用于注册&#x2F;释放各种不同类型的缓冲区资源。通过提前注册这些缓冲区可以减轻后续每个 IO 的申请资源开销</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> <span class="hljs-title function_">io_uring_register</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> fd, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> opcode, <span class="hljs-type">void</span> *arg, <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> nr_args)</span>;<br></code></pre></td></tr></table></figure>
+
+
+
+<h3 id="源码-2"><a href="#源码-2" class="headerlink" title="源码"></a>源码</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">int</span> __io_uring_register(<span class="hljs-keyword">struct</span> io_ring_ctx *ctx, <span class="hljs-type">unsigned</span> opcode,<br>			       <span class="hljs-type">void</span> __user *arg, <span class="hljs-type">unsigned</span> nr_args)<br>	__releases(ctx-&gt;uring_lock)<br>	__acquires(ctx-&gt;uring_lock)<br>&#123;<br>	<span class="hljs-type">int</span> ret;<br><br>	<span class="hljs-comment">/*</span><br><span class="hljs-comment">	 * We don&#x27;t quiesce the refs for register anymore and so it can&#x27;t be</span><br><span class="hljs-comment">	 * dying as we&#x27;re holding a file ref here.</span><br><span class="hljs-comment">	 */</span><br><br>	<span class="hljs-keyword">if</span> (ctx-&gt;restricted) &#123;<br>		opcode = array_index_nospec(opcode, IORING_REGISTER_LAST);<br>		<span class="hljs-keyword">if</span> (!test_bit(opcode, ctx-&gt;restrictions.register_op))<br>			<span class="hljs-keyword">return</span> -EACCES;<br>	&#125;<br><br>    <span class="hljs-comment">// 根据操作码执行不同逻辑，以注册io_uring fd为例</span><br>	<span class="hljs-keyword">switch</span> (opcode) &#123;<br>	<span class="hljs-keyword">case</span> IORING_REGISTER_RING_FDS:<br>		ret = io_ringfd_register(ctx, arg, nr_args);<br>		<span class="hljs-keyword">break</span>;<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> ret;<br>&#125;<br><br><br><br><span class="hljs-comment">// 虽然只注册一个io_uring fd，但是current中的所有io_uring fds都需要更新，__arg指向一个</span><br><span class="hljs-comment">// io_uring_rsrc_update数组，nr_args是数组长度。</span><br><span class="hljs-comment">// 每个元素是一个io_uring_rsrc_update，存储一个io_uring fd以及这个io_uring fd想要存放</span><br><span class="hljs-comment">// 在current-&gt;io_uring_task-&gt;registerd_rings中的位置，即io_uring_rsrc_update-&gt;offset，</span><br><span class="hljs-comment">// 如果offset为-1，那么表示可以存放在任意位置。</span><br><span class="hljs-comment">//</span><br><span class="hljs-comment">// 函数的返回值表示有多少个io_uring fds是成功更新了的</span><br><span class="hljs-comment">// </span><br><span class="hljs-type">int</span> <span class="hljs-title function_">io_ringfd_register</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> io_ring_ctx *ctx, <span class="hljs-type">void</span> __user *__arg,</span><br><span class="hljs-params">		       <span class="hljs-type">unsigned</span> nr_args)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_rsrc_update</span> __<span class="hljs-title">user</span> *<span class="hljs-title">arg</span> =</span> __arg;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_rsrc_update</span> <span class="hljs-title">reg</span>;</span><br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">io_uring_task</span> *<span class="hljs-title">tctx</span>;</span><br>	<span class="hljs-type">int</span> ret, i;<br><br><br>	mutex_unlock(&amp;ctx-&gt;uring_lock);<br>	ret = __io_uring_add_tctx_node(ctx);<br>	mutex_lock(&amp;ctx-&gt;uring_lock);<br><br><br>	tctx = current-&gt;io_uring;<br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; nr_args; i++) &#123;<br>		<span class="hljs-type">int</span> start, end;<br><br>		<span class="hljs-keyword">if</span> (copy_from_user(&amp;reg, &amp;arg[i], <span class="hljs-keyword">sizeof</span>(reg))) &#123;<br>			ret = -EFAULT;<br>			<span class="hljs-keyword">break</span>;<br>		&#125;<br><br><br>		<span class="hljs-keyword">if</span> (reg.offset == <span class="hljs-number">-1U</span>) &#123;<br>			start = <span class="hljs-number">0</span>;<br>			end = IO_RINGFD_REG_MAX;<br>		&#125; <span class="hljs-keyword">else</span> &#123;<br>			<span class="hljs-keyword">if</span> (reg.offset &gt;= IO_RINGFD_REG_MAX) &#123;<br>				ret = -EINVAL;<br>				<span class="hljs-keyword">break</span>;<br>			&#125;<br>			start = reg.offset;<br>			end = start + <span class="hljs-number">1</span>;<br>		&#125;<br><br>		ret = io_ring_add_registered_fd(tctx, reg.data, start, end);<br>		<span class="hljs-keyword">if</span> (ret &lt; <span class="hljs-number">0</span>)<br>			<span class="hljs-keyword">break</span>;<br><br>		reg.offset = ret;<br>		<span class="hljs-keyword">if</span> (copy_to_user(&amp;arg[i], &amp;reg, <span class="hljs-keyword">sizeof</span>(reg))) &#123;<br>			fput(tctx-&gt;registered_rings[reg.offset]);<br>			tctx-&gt;registered_rings[reg.offset] = <span class="hljs-literal">NULL</span>;<br>			ret = -EFAULT;<br>			<span class="hljs-keyword">break</span>;<br>		&#125;<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> i ? i : ret;<br>&#125;<br><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">io_ring_add_registered_file</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> io_uring_task *tctx, <span class="hljs-keyword">struct</span> file *file,</span><br><span class="hljs-params">				     <span class="hljs-type">int</span> start, <span class="hljs-type">int</span> end)</span><br>&#123;<br>	<span class="hljs-type">int</span> offset;<br>    <span class="hljs-comment">// 从disired index处开始依次检验，如果都没位置，则该io_uring fd更新失败</span><br>	<span class="hljs-keyword">for</span> (offset = start; offset &lt; end; offset++) &#123;<br>		offset = array_index_nospec(offset, IO_RINGFD_REG_MAX);<br>		<span class="hljs-keyword">if</span> (tctx-&gt;registered_rings[offset])<br>			<span class="hljs-keyword">continue</span>;<br><br>		tctx-&gt;registered_rings[offset] = file;<br>		<span class="hljs-keyword">return</span> offset;<br>	&#125;<br>	<span class="hljs-keyword">return</span> -EBUSY;<br>&#125;<br><br><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title function_">io_ring_add_registered_fd</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> io_uring_task *tctx, <span class="hljs-type">int</span> fd,</span><br><span class="hljs-params">				     <span class="hljs-type">int</span> start, <span class="hljs-type">int</span> end)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">file</span> *<span class="hljs-title">file</span>;</span><br>	<span class="hljs-type">int</span> offset;<br><br>	file = fget(fd);<br>	<span class="hljs-keyword">if</span> (!file) &#123;<br>		<span class="hljs-keyword">return</span> -EBADF;<br>	&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!io_is_uring_fops(file)) &#123;<br>		fput(file);<br>		<span class="hljs-keyword">return</span> -EOPNOTSUPP;<br>	&#125;<br>	offset = io_ring_add_registered_file(tctx, file, start, end);<br>	<span class="hljs-keyword">if</span> (offset &lt; <span class="hljs-number">0</span>)<br>		fput(file);<br>	<span class="hljs-keyword">return</span> offset;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Linux-kernel/" class="category-chain-item">Linux kernel</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>io_uring api</div>
+      <div>http://example.com/io-uring-api-及实现/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Yw</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年3月26日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/io-uring-%E5%AE%9E%E7%8E%B0/" title="io_uring api">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">io_uring api</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/jump-label/" title="jump label">
+                        <span class="hidden-mobile">jump label</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"model":{"jsonPath":"/live2dw/assets/haruto.model.json"},"display":{"position":"right","width":150,"height":300},"mobile":{"show":true},"log":false,"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>
