@@ -4,6 +4,25 @@
   
   
   <entry>
+    <title>链接阶段gnu库</title>
+    <link href="/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/"/>
+    <url>/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/</url>
+    
+    <content type="html"><![CDATA[<h1 id="链接器"><a href="#链接器" class="headerlink" title="链接器"></a>链接器</h1><p>在linux中，链接器分为</p><ul><li>动态链接器：ld-linux.so，路径一般为&#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.31.so</li><li>静态链接器：ld，路径一般为&#x2F;usr&#x2F;bin&#x2F;x86_64-linux-gnu-ld.bfd</li></ul><p>静态链接器x86_64-linux-gnu-ld.bfd名字中的<strong>bfd</strong>是什么？</p><p>总所周知，linux的文件后缀名没有任何意义，和windows不同，其不会决定文件的属性。后缀名一般用于提示文件的属性或者其他特性。例如，这里的<strong>bfd</strong>的作用是说明静态链接器使用了libbfd，通过以下命令的执行结果可以得到验证</p><p><img src="/../img/linker/file_type/ld_ldd.png" alt="ld_ldd"></p><p>静态链接器使用了libbfd-2.34-system.so，bfd的全称是Binary File Descriptor library。libbfd可以用来解析任意格式的对象文件。这也是静态链接器需要应对的。参考<strong>官网文档</strong>：This version of <strong>ld</strong> uses the general purpose BFD libraries to operate on object files. This allows <strong>ld</strong> to read, combine, and write object files in many different formats—for example, COFF or <code>&quot;a.out&quot;</code>. Different formats may be linked together to produce any available kind of object file</p><h1 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h1><ul><li>bfd的实现：usr&#x2F;local&#x2F;include&#x2F;bfd.h</li></ul>]]></content>
+    
+    
+    <categories>
+      
+      <category>linker/loader</category>
+      
+    </categories>
+    
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>io_uring api</title>
     <link href="/io-uring-%E5%AE%9E%E7%8E%B0/"/>
     <url>/io-uring-%E5%AE%9E%E7%8E%B0/</url>
