@@ -16,23 +16,24 @@
   <meta name="author" content="Yw">
   <meta name="keywords" content="">
   
-    <meta name="description" content="链接器在linux中，链接器分为  动态链接器：ld-linux.so，路径一般为&#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.31.so 静态链接器：ld，路径一般为&#x2F;usr&#x2F;bin&#x2F;x86_64-linux-gnu-ld.bfd  静态链接器x86_64-linux-gnu-ld.bfd名字中的bfd是什么？ 总所周知，linux">
+    <meta name="description" content="ifuncwhy最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小">
 <meta property="og:type" content="article">
-<meta property="og:title" content="链接阶段gnu库">
-<meta property="og:url" content="http://example.com/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/index.html">
+<meta property="og:title" content="ifunc">
+<meta property="og:url" content="http://example.com/ifunc/index.html">
 <meta property="og:site_name" content="YWgrit&#39;s blog">
-<meta property="og:description" content="链接器在linux中，链接器分为  动态链接器：ld-linux.so，路径一般为&#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.31.so 静态链接器：ld，路径一般为&#x2F;usr&#x2F;bin&#x2F;x86_64-linux-gnu-ld.bfd  静态链接器x86_64-linux-gnu-ld.bfd名字中的bfd是什么？ 总所周知，linux">
+<meta property="og:description" content="ifuncwhy最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/img/linker/file_type/ld_ldd.png">
-<meta property="article:published_time" content="2024-04-24T13:40:00.000Z">
-<meta property="article:modified_time" content="2024-04-25T15:16:10.714Z">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
+<meta property="article:published_time" content="2024-05-05T06:40:14.000Z">
+<meta property="article:modified_time" content="2024-05-05T06:45:43.316Z">
 <meta property="article:author" content="Yw">
+<meta property="article:tag" content="linker&#x2F;loader">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/img/linker/file_type/ld_ldd.png">
+<meta name="twitter:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
   
   
   
-  <title>链接阶段gnu库 - YWgrit&#39;s blog</title>
+  <title>ifunc - YWgrit&#39;s blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -214,7 +215,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="链接阶段gnu库"></span>
+            <span id="subtitle" data-typed-text="ifunc"></span>
           
         </div>
 
@@ -225,8 +226,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2024-04-24 21:40" pubdate>
-          2024年4月24日 晚上
+        <time datetime="2024-05-05 14:40" pubdate>
+          2024年5月5日 下午
         </time>
       </span>
     
@@ -237,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          701 字
+          1.4k 字
         
       </span>
     
@@ -248,7 +249,7 @@
         
         
         
-          6 分钟
+          12 分钟
         
       </span>
     
@@ -294,23 +295,20 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">链接阶段gnu库</h1>
+            <h1 style="display: none">ifunc</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="链接器"><a href="#链接器" class="headerlink" title="链接器"></a>链接器</h1><p>在linux中，链接器分为</p>
-<ul>
-<li>动态链接器：ld-linux.so，路径一般为&#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.31.so</li>
-<li>静态链接器：ld，路径一般为&#x2F;usr&#x2F;bin&#x2F;x86_64-linux-gnu-ld.bfd</li>
-</ul>
-<p>静态链接器x86_64-linux-gnu-ld.bfd名字中的<strong>bfd</strong>是什么？</p>
-<p>总所周知，linux的文件后缀名没有任何意义，和windows不同，其不会决定文件的属性。后缀名一般用于提示文件的属性或者其他特性。例如，这里的<strong>bfd</strong>的作用是说明静态链接器使用了libbfd，通过以下命令的执行结果可以得到验证</p>
-<p><img src="/../img/linker/file_type/ld_ldd.png" srcset="/img/loading.gif" lazyload alt="ld_ldd"></p>
-<p>静态链接器使用了libbfd-2.34-system.so，bfd的全称是Binary File Descriptor library。libbfd可以用来解析任意格式的对象文件。这也是静态链接器需要应对的。参考<a target="_blank" rel="noopener" href="https://linux.die.net/man/1/arm-linux-gnu-ld.bfd">官网文档</a>：This version of <strong>ld</strong> uses the general purpose BFD libraries to operate on object files. This allows <strong>ld</strong> to read, combine, and write object files in many different formats—for example, COFF or <code>&quot;a.out&quot;</code>. Different formats may be linked together to produce any available kind of object file</p>
-<h1 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h1><ul>
-<li>bfd的实现：usr&#x2F;local&#x2F;include&#x2F;bfd.h</li>
-</ul>
+                <h2 id="ifunc"><a href="#ifunc" class="headerlink" title="ifunc"></a>ifunc</h2><h3 id="why"><a href="#why" class="headerlink" title="why"></a>why</h3><p>最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小时就不能忍受了。通常，在程序的运行期间，一个函数引用对应的实现是不会改变的，因此只要解析一次函数调用即可，后续调用不必再解析。可以看出，该需求和plt很类似。</p>
+<h3 id="what"><a href="#what" class="headerlink" title="what"></a>what</h3><p>如果函数func有多个版本，为了避免每次调用func时都进行一遍版本选择，可以将函数func的符号类型定义为<code>STT_GNU_IFUNC</code>，并且为func实现相应的函数解析器。之后在elf装载时，会进行函数解析，将选择的版本记录下来，以后每一次调用func都会自动跳转到对应的版本。这就是ifunc。</p>
+<p>对该类函数的引用是通过<code>R_*_IRELATIVE</code> 重定位间接处理的，该重定位返回运行解析器的结果，即返回指向所选实现的函数指针。</p>
+<h3 id="how"><a href="#how" class="headerlink" title="how"></a>how</h3><p><code>readelf -s elf</code> 可以查看elf的所有符号。</p>
+<p><img src="/../img/linker/ifunc/libc_ifunc.png" srcset="/img/loading.gif" lazyload alt="libc_ifunc"></p>
+<p>可以看到，strncpy和memcpy等字符串处理函数和内存处理函数的符号类型都是<code>STT_GNU_IFUNC</code>。</p>
+<p>以下是一个简单的例子</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* Dispatching via IFUNC ELF Extension */</span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stddef.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_c</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_sse42</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_avx2</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_sse42</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_avx2</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> __builtin_cpu_supports(<span class="hljs-string">&quot;avx&quot;</span>);<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined(__AVX2__)</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> __<span class="hljs-title function_">attribute__</span><span class="hljs-params">((ifunc (<span class="hljs-string">&quot;resolve_foo&quot;</span>)))</span>;<br><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title function_">resolve_foo</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>        <span class="hljs-keyword">if</span> (cpu_has_avx2())<br>                <span class="hljs-keyword">return</span> foo_avx2;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (cpu_has_sse42())<br>                <span class="hljs-keyword">return</span> foo_sse42;<br>        <span class="hljs-keyword">else</span><br>                <span class="hljs-keyword">return</span> foo_c;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	foo(<span class="hljs-literal">NULL</span>, <span class="hljs-number">0</span>);<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
 
                 
               </div>
@@ -319,27 +317,13 @@
             <div>
               <div class="post-metas my-3">
   
-    <div class="post-meta mr-3 d-flex align-items-center">
-      <i class="iconfont icon-category"></i>
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
       
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/linker-loader/" class="category-chain-item">linker/loader</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
+        <a href="/tags/linker-loader/">#linker/loader</a>
+      
     </div>
-  
   
 </div>
 
@@ -349,8 +333,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>链接阶段gnu库</div>
-      <div>http://example.com/链接阶段gnu库/</div>
+      <div>ifunc</div>
+      <div>http://example.com/ifunc/</div>
     </div>
     <div class="license-meta">
       
@@ -362,7 +346,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年4月24日</div>
+          <div>2024年5月5日</div>
         </div>
       
       
@@ -394,18 +378,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/ifunc/" title="ifunc">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">ifunc</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/io-uring-%E5%AE%9E%E7%8E%B0/" title="io_uring api">
-                        <span class="hidden-mobile">io_uring api</span>
+                      <a href="/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/" title="链接阶段gnu库">
+                        <span class="hidden-mobile">链接阶段gnu库</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
