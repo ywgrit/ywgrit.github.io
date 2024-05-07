@@ -16,23 +16,23 @@
   <meta name="author" content="Yw">
   <meta name="keywords" content="">
   
-    <meta name="description" content="ifuncwhy最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小">
+    <meta name="description" content="虚函数表虚函数表的结构很容易找到文档，参考 查表过程虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？ 网上的回答： 编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ifunc">
-<meta property="og:url" content="http://example.com/ifunc/index.html">
+<meta property="og:title" content="vtbl">
+<meta property="og:url" content="http://example.com/vtbl/index.html">
 <meta property="og:site_name" content="YWgrit&#39;s blog">
-<meta property="og:description" content="ifuncwhy最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小">
+<meta property="og:description" content="虚函数表虚函数表的结构很容易找到文档，参考 查表过程虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？ 网上的回答： 编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
-<meta property="article:published_time" content="2024-05-05T06:40:14.000Z">
-<meta property="article:modified_time" content="2024-05-05T06:54:37.333Z">
+<meta property="og:image" content="http://example.com/img/cpp/vtbl_lookup.png">
+<meta property="article:published_time" content="2024-05-07T16:37:29.000Z">
+<meta property="article:modified_time" content="2024-05-07T16:44:29.459Z">
 <meta property="article:author" content="Yw">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
+<meta name="twitter:image" content="http://example.com/img/cpp/vtbl_lookup.png">
   
   
   
-  <title>ifunc - YWgrit&#39;s blog</title>
+  <title>vtbl - YWgrit&#39;s blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -214,7 +214,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="ifunc"></span>
+            <span id="subtitle" data-typed-text="vtbl"></span>
           
         </div>
 
@@ -225,8 +225,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2024-05-05 14:40" pubdate>
-          2024年5月5日 下午
+        <time datetime="2024-05-08 00:37" pubdate>
+          2024年5月8日 凌晨
         </time>
       </span>
     
@@ -237,7 +237,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.4k 字
+          1.2k 字
         
       </span>
     
@@ -248,7 +248,7 @@
         
         
         
-          12 分钟
+          10 分钟
         
       </span>
     
@@ -294,20 +294,20 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">ifunc</h1>
+            <h1 style="display: none">vtbl</h1>
             
             
               <div class="markdown-body">
                 
-                <h2 id="ifunc"><a href="#ifunc" class="headerlink" title="ifunc"></a>ifunc</h2><h3 id="why"><a href="#why" class="headerlink" title="why"></a>why</h3><p>最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小时就不能忍受了。通常，在程序的运行期间，一个函数引用对应的实现是不会改变的，因此只要解析一次函数调用即可，后续调用不必再解析。可以看出，该需求和plt很类似。</p>
-<h3 id="what"><a href="#what" class="headerlink" title="what"></a>what</h3><p>如果函数func有多个版本，为了避免每次调用func时都进行一遍版本选择，可以将函数func的符号类型定义为<code>STT_GNU_IFUNC</code>，并且为func实现相应的函数解析器。之后在elf装载时，会进行函数解析，将选择的版本记录下来，以后每一次调用func都会自动跳转到对应的版本。这就是ifunc。</p>
-<p>对该类函数的引用是通过<code>R_*_IRELATIVE</code> 重定位间接处理的，该重定位返回运行解析器的结果，即返回指向所选实现的函数指针。</p>
-<h3 id="how"><a href="#how" class="headerlink" title="how"></a>how</h3><p><code>readelf -s elf</code> 可以查看elf的所有符号。</p>
-<p><img src="/../img/linker/ifunc/libc_ifunc.png" srcset="/img/loading.gif" lazyload alt="libc_ifunc"></p>
-<p>可以看到，strncpy和memcpy等字符串处理函数和内存处理函数的符号类型都是<code>STT_GNU_IFUNC</code>。</p>
-<p>以下是一个简单的例子</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* Dispatching via IFUNC ELF Extension */</span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stddef.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_c</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_sse42</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_avx2</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_sse42</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_avx2</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> __builtin_cpu_supports(<span class="hljs-string">&quot;avx&quot;</span>);<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined(__AVX2__)</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> __<span class="hljs-title function_">attribute__</span><span class="hljs-params">((ifunc (<span class="hljs-string">&quot;resolve_foo&quot;</span>)))</span>;<br><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title function_">resolve_foo</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>        <span class="hljs-keyword">if</span> (cpu_has_avx2())<br>                <span class="hljs-keyword">return</span> foo_avx2;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (cpu_has_sse42())<br>                <span class="hljs-keyword">return</span> foo_sse42;<br>        <span class="hljs-keyword">else</span><br>                <span class="hljs-keyword">return</span> foo_c;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	foo(<span class="hljs-literal">NULL</span>, <span class="hljs-number">0</span>);<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+                <h1 id="虚函数表"><a href="#虚函数表" class="headerlink" title="虚函数表"></a>虚函数表</h1><h2 id="虚函数表的结构"><a href="#虚函数表的结构" class="headerlink" title="虚函数表的结构"></a>虚函数表的结构</h2><p>很容易找到文档，<a target="_blank" rel="noopener" href="https://www.learncpp.com/cpp-tutorial/the-virtual-table/">参考</a></p>
+<h2 id="查表过程"><a href="#查表过程" class="headerlink" title="查表过程"></a>查表过程</h2><p>虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？</p>
+<p><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/425173545?utm_id=0">网上的回答</a>：</p>
+<p>编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关系，再把所有记住名字的地方的名字一个一个替换成偏移。</p>
+<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;iostream&gt;</span></span><br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">base</span> &#123;<br> <span class="hljs-keyword">public</span>:<br>    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">func1</span><span class="hljs-params">()</span> </span>&#123;std::cout &lt;&lt; <span class="hljs-string">&quot;I&#x27;m in class base func1&quot;</span> &lt;&lt; std::endl;&#125;<br>&#125;;<br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">derived</span> :<span class="hljs-keyword">public</span> base &#123;<br> <span class="hljs-keyword">public</span>:<br>    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">func2</span><span class="hljs-params">()</span> </span>&#123;std::cout &lt;&lt; <span class="hljs-string">&quot;I&#x27;m in class derived func2&quot;</span> &lt;&lt; std::endl;&#125;<br>&#125;;<br><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>&#123;<br>    derived *d = <span class="hljs-keyword">new</span> <span class="hljs-built_in">derived</span>();<br>    d-&gt;<span class="hljs-built_in">func2</span>();<br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
 
+<p>通过gdb进行调试：</p>
+<p><img src="/../img/cpp/vtbl_lookup.png" srcset="/img/loading.gif" lazyload alt="vtbl_lookup">以下汇编中加入了注释，可以看出d-&gt;func2是直接对vptr加上一个常量偏移（这里是8，即偏移一个表项)，因此可以验证：在编译完成后，每个虚函数在虚函数表中的偏移已经确定了</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs assembly">│    0x5555555551f2 &lt;main()+41&gt;                  mov    %rbx,-0x18(%rbp)  # rbx是d的值，将变量d存放于栈顶：-0x18(%rbp) <br>│    0x5555555551f6 &lt;main()+45&gt;                  mov    -0x18(%rbp),%rax <br>│    0x5555555551fa &lt;main()+49&gt;                  mov    (%rax),%rax       # rax是vptr，指向vtbl<br>│    0x5555555551fd &lt;main()+52&gt;                  add    $0x8,%rax         # 加上常量rax指向虚函数表的第二项<br>│    0x555555555201 &lt;main()+56&gt;                  mov    (%rax),%rdx       # rdx是第二个表项的值，其指向func2的地址<br>│    0x555555555204 &lt;main()+59&gt;                  mov    -0x18(%rbp),%rax<br>│    0x555555555208 &lt;main()+63&gt;                  mov    %rax,%rdi<br>│    0x55555555520b &lt;main()+66&gt;                  call   *%rdx             # 调用func2<br></code></pre></td></tr></table></figure>
 
                 
               </div>
@@ -326,7 +326,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/linker-loader/" class="category-chain-item">linker/loader</a>
+  <a href="/categories/cpp/" class="category-chain-item">cpp</a>
   
   
 
@@ -346,8 +346,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>ifunc</div>
-      <div>http://example.com/ifunc/</div>
+      <div>vtbl</div>
+      <div>http://example.com/vtbl/</div>
     </div>
     <div class="license-meta">
       
@@ -359,7 +359,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年5月5日</div>
+          <div>2024年5月8日</div>
         </div>
       
       
@@ -391,18 +391,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/vtbl/" title="vtbl">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">vtbl</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/" title="链接阶段gnu库">
-                        <span class="hidden-mobile">链接阶段gnu库</span>
+                      <a href="/ifunc/" title="ifunc">
+                        <span class="hidden-mobile">ifunc</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
