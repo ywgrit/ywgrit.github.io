@@ -240,6 +240,60 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h1 class="index-header">
         
+        <a href="/memopt/" target="_self">
+          memopt
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/memopt/" target="_self">
+        <div>
+          记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&#x2
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2024-05-15 00:01" pubdate>
+              2024-05-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/glibc/" class="category-chain-item">glibc</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
         <a href="/vtbl/" target="_self">
           vtbl
         </a>

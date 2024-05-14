@@ -16,23 +16,21 @@
   <meta name="author" content="Yw">
   <meta name="keywords" content="">
   
-    <meta name="description" content="虚函数表虚函数表的结构很容易找到文档，参考 查表过程疑问虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？ 网上的回答编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关">
+    <meta name="description" content="记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&amp;#x2">
 <meta property="og:type" content="article">
-<meta property="og:title" content="vtbl">
-<meta property="og:url" content="http://example.com/vtbl/index.html">
+<meta property="og:title" content="memopt">
+<meta property="og:url" content="http://example.com/memopt/index.html">
 <meta property="og:site_name" content="YWgrit&#39;s blog">
-<meta property="og:description" content="虚函数表虚函数表的结构很容易找到文档，参考 查表过程疑问虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？ 网上的回答编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关">
+<meta property="og:description" content="记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&amp;#x2">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/img/cpp/vtbl_lookup.png">
-<meta property="article:published_time" content="2024-05-07T16:37:29.000Z">
-<meta property="article:modified_time" content="2024-05-07T16:58:31.152Z">
+<meta property="article:published_time" content="2024-05-14T16:01:34.000Z">
+<meta property="article:modified_time" content="2024-05-14T16:15:30.518Z">
 <meta property="article:author" content="Yw">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/img/cpp/vtbl_lookup.png">
   
   
   
-  <title>vtbl - YWgrit&#39;s blog</title>
+  <title>memopt - YWgrit&#39;s blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -214,7 +212,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="vtbl"></span>
+            <span id="subtitle" data-typed-text="memopt"></span>
           
         </div>
 
@@ -225,8 +223,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2024-05-08 00:37" pubdate>
-          2024年5月8日 凌晨
+        <time datetime="2024-05-15 00:01" pubdate>
+          2024年5月15日 凌晨
         </time>
       </span>
     
@@ -237,7 +235,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.2k 字
+          2.6k 字
         
       </span>
     
@@ -248,7 +246,7 @@
         
         
         
-          10 分钟
+          22 分钟
         
       </span>
     
@@ -294,19 +292,21 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">vtbl</h1>
+            <h1 style="display: none">memopt</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="虚函数表"><a href="#虚函数表" class="headerlink" title="虚函数表"></a>虚函数表</h1><h2 id="虚函数表的结构"><a href="#虚函数表的结构" class="headerlink" title="虚函数表的结构"></a>虚函数表的结构</h2><p>很容易找到文档，<a target="_blank" rel="noopener" href="https://www.learncpp.com/cpp-tutorial/the-virtual-table/">参考</a></p>
-<h2 id="查表过程"><a href="#查表过程" class="headerlink" title="查表过程"></a>查表过程</h2><h4 id="疑问"><a href="#疑问" class="headerlink" title="疑问"></a>疑问</h4><p>虚函数表中存着一个个最终动态确定下来的虚函数的地址，在调用虚函数的时候，是如何在虚函数表中找到当前调用这个函数的地址的？</p>
-<h4 id="网上的回答"><a href="#网上的回答" class="headerlink" title="网上的回答"></a><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/425173545?utm_id=0">网上的回答</a></h4><p>编译器遇到一个虚函数定义的时候就记住一个名字，遇到一个虚函数调用的时候也记住一个名字，编译完成后，一个一个统计每个类的虚表里应该有多少个虚函数，然后把统计到的虚函数一个一个分配到格子里，得到一个名字到偏移的对应关系，再把所有记住名字的地方的名字一个一个替换成偏移。</p>
-<h4 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;iostream&gt;</span></span><br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">base</span> &#123;<br> <span class="hljs-keyword">public</span>:<br>    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">func1</span><span class="hljs-params">()</span> </span>&#123;std::cout &lt;&lt; <span class="hljs-string">&quot;I&#x27;m in class base func1&quot;</span> &lt;&lt; std::endl;&#125;<br>&#125;;<br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">derived</span> :<span class="hljs-keyword">public</span> base &#123;<br> <span class="hljs-keyword">public</span>:<br>    <span class="hljs-function"><span class="hljs-keyword">virtual</span> <span class="hljs-type">void</span> <span class="hljs-title">func2</span><span class="hljs-params">()</span> </span>&#123;std::cout &lt;&lt; <span class="hljs-string">&quot;I&#x27;m in class derived func2&quot;</span> &lt;&lt; std::endl;&#125;<br>&#125;;<br><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">()</span> </span>&#123;<br>    derived *d = <span class="hljs-keyword">new</span> <span class="hljs-built_in">derived</span>();<br>    d-&gt;<span class="hljs-built_in">func2</span>();<br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+                <p>记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题</p>
+<h2 id="memcmp"><a href="#memcmp" class="headerlink" title="memcmp"></a>memcmp</h2><p>在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。</p>
+<h4 id="x86"><a href="#x86" class="headerlink" title="x86"></a>x86</h4><p>位置：linux&#x2F;arch&#x2F;x86&#x2F;lib&#x2F;copy_page_64.S</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><code class="hljs assembly">	ALIGN<br>SYM_FUNC_START(copy_page)<br>	ALTERNATIVE &quot;jmp copy_page_regs&quot;, &quot;&quot;, X86_FEATURE_REP_GOOD # X86_FEATURE_REP_GOOD是Linux内核中的一个标志，表示某些x86 CPU在使用带有 REP 前缀的字符串操作指令时性能表现良好（例如 REP MOVSB, REP STOSB 等）<br>	movl	$4096/8, %ecx 					# movsq一次拷贝8字节<br>	rep	movsq<br>	RET<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br><br>SYM_FUNC_START_LOCAL(copy_page_regs)<br>	subq	$2*8,	%rsp<br>	movq	%rbx,	(%rsp)					# x86中，rbx和r12由callee保存<br>	movq	%r12,	1*8(%rsp)<br><br>	movl	$(4096/64)-5,	%ecx			# 将拷贝一个页面分为两个阶段，1)存在数据预取，2)不存在数据预取。5是预取的数据距离当前操作的数据的距离，单位是cacheline的大小<br>	.p2align 4<br>.Loop64:									# 页面拷贝的第一阶段<br>	dec	%rcx<br>	movq	0x8*0(%rsi), %rax<br>	movq	0x8*1(%rsi), %rbx<br>	movq	0x8*2(%rsi), %rdx<br>	movq	0x8*3(%rsi), %r8<br>	movq	0x8*4(%rsi), %r9<br>	movq	0x8*5(%rsi), %r10<br>	movq	0x8*6(%rsi), %r11<br>	movq	0x8*7(%rsi), %r12<br><br>	prefetcht0 5*64(%rsi)					# 为什么距离是5个cacheline，一次循环拷贝64字节，那么一个cacheline大小不就可以了吗？<br><br>	movq	%rax, 0x8*0(%rdi)<br>	movq	%rbx, 0x8*1(%rdi)<br>	movq	%rdx, 0x8*2(%rdi)<br>	movq	%r8,  0x8*3(%rdi)<br>	movq	%r9,  0x8*4(%rdi)<br>	movq	%r10, 0x8*5(%rdi)<br>	movq	%r11, 0x8*6(%rdi)<br>	movq	%r12, 0x8*7(%rdi)<br><br>	leaq	64 (%rsi), %rsi<br>	leaq	64 (%rdi), %rdi<br><br>	jnz	.Loop64<br><br>	movl	$5, %ecx<br>	.p2align 4<br>.Loop2:										# 页面拷贝的第二阶段<br>	decl	%ecx<br><br>	movq	0x8*0(%rsi), %rax<br>	movq	0x8*1(%rsi), %rbx<br>	movq	0x8*2(%rsi), %rdx<br>	movq	0x8*3(%rsi), %r8<br>	movq	0x8*4(%rsi), %r9<br>	movq	0x8*5(%rsi), %r10<br>	movq	0x8*6(%rsi), %r11<br>	movq	0x8*7(%rsi), %r12<br><br>	movq	%rax, 0x8*0(%rdi)<br>	movq	%rbx, 0x8*1(%rdi)<br>	movq	%rdx, 0x8*2(%rdi)<br>	movq	%r8,  0x8*3(%rdi)<br>	movq	%r9,  0x8*4(%rdi)<br>	movq	%r10, 0x8*5(%rdi)<br>	movq	%r11, 0x8*6(%rdi)<br>	movq	%r12, 0x8*7(%rdi)<br><br>	leaq	64(%rdi), %rdi<br>	leaq	64(%rsi), %rsi<br>	jnz	.Loop2<br><br>	movq	(%rsp), %rbx<br>	movq	1*8(%rsp), %r12<br>	addq	$2*8, %rsp<br>	RET<br>SYM_FUNC_END(copy_page_regs)<br><br></code></pre></td></tr></table></figure>
 
-<p>通过gdb进行调试：</p>
-<p><img src="/../img/cpp/vtbl_lookup.png" srcset="/img/loading.gif" lazyload alt="vtbl_lookup">以下汇编中加入了注释，可以看出d-&gt;func2是直接对vptr加上一个常量偏移（这里是8，即偏移一个表项)，因此可以验证：在编译完成后，每个虚函数在虚函数表中的偏移已经确定了</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs assembly">│    0x5555555551f2 &lt;main()+41&gt;                  mov    %rbx,-0x18(%rbp)  # rbx是d的值，将变量d存放于栈顶：-0x18(%rbp) <br>│    0x5555555551f6 &lt;main()+45&gt;                  mov    -0x18(%rbp),%rax <br>│    0x5555555551fa &lt;main()+49&gt;                  mov    (%rax),%rax       # rax是vptr，指向vtbl<br>│    0x5555555551fd &lt;main()+52&gt;                  add    $0x8,%rax         # 加上常量rax指向虚函数表的第二项<br>│    0x555555555201 &lt;main()+56&gt;                  mov    (%rax),%rdx       # rdx是第二个表项的值，其指向func2的地址<br>│    0x555555555204 &lt;main()+59&gt;                  mov    -0x18(%rbp),%rax<br>│    0x555555555208 &lt;main()+63&gt;                  mov    %rax,%rdi<br>│    0x55555555520b &lt;main()+66&gt;                  call   *%rdx             # 调用func2<br></code></pre></td></tr></table></figure>
+
+
+<h4 id="loongarch"><a href="#loongarch" class="headerlink" title="loongarch"></a>loongarch</h4><p>位置：arch&#x2F;loongarch&#x2F;mm&#x2F;page.S</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.align 5<br>SYM_FUNC_START(copy_page)<br>	lu12i.w	t8, 1 &lt;&lt; (PAGE_SHIFT - 12)<br>	add.d	t8, t8, a0<br>1:<br>	ld.d	t0, a1, 0					# a1是源操作数的地址，a0是目的操作数的地址，（需要翻翻loongarch的abi了）<br>	ld.d	t1, a1, 8<br>	ld.d	t2, a1, 16<br>	ld.d	t3, a1, 24<br>	ld.d	t4, a1, 32<br>	ld.d	t5, a1, 40<br>	ld.d	t6, a1, 48<br>	ld.d	t7, a1, 56<br><br>	st.d	t0, a0, 0					# 这段代码看不懂了：1)为什么按照如下顺序排列？2)为什么没使用预取指令？<br>	st.d	t1, a0, 8<br>	ld.d	t0, a1, 64<br>	ld.d	t1, a1, 72<br>	st.d	t2, a0, 16<br>	st.d	t3, a0, 24<br>	ld.d	t2, a1, 80<br>	ld.d	t3, a1, 88<br>	st.d	t4, a0, 32<br>	st.d	t5, a0, 40<br>	ld.d	t4, a1, 96<br>	ld.d	t5, a1, 104<br>	st.d	t6, a0, 48<br>	st.d	t7, a0, 56<br>	ld.d	t6, a1, 112<br>	ld.d	t7, a1, 120<br>	addi.d	a0, a0, 128<br>	addi.d	a1, a1, 128<br><br>	st.d	t0, a0, -64<br>	st.d	t1, a0, -56<br>	st.d	t2, a0, -48<br>	st.d	t3, a0, -40<br>	st.d	t4, a0, -32<br>	st.d	t5, a0, -24<br>	st.d	t6, a0, -16<br>	st.d	t7, a0, -8<br><br>	bne	t8, a0, 1b<br>	jr	ra<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br></code></pre></td></tr></table></figure>
+
 
                 
               </div>
@@ -325,7 +325,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/cpp/" class="category-chain-item">cpp</a>
+  <a href="/categories/glibc/" class="category-chain-item">glibc</a>
   
   
 
@@ -345,8 +345,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>vtbl</div>
-      <div>http://example.com/vtbl/</div>
+      <div>memopt</div>
+      <div>http://example.com/memopt/</div>
     </div>
     <div class="license-meta">
       
@@ -358,7 +358,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年5月8日</div>
+          <div>2024年5月15日</div>
         </div>
       
       
@@ -390,18 +390,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/memopt/" title="memopt">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">memopt</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/ifunc/" title="ifunc">
-                        <span class="hidden-mobile">ifunc</span>
+                      <a href="/vtbl/" title="vtbl">
+                        <span class="hidden-mobile">vtbl</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
