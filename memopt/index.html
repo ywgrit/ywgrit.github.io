@@ -24,7 +24,7 @@
 <meta property="og:description" content="记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&amp;#x2">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-05-14T16:01:34.000Z">
-<meta property="article:modified_time" content="2024-05-14T16:15:30.518Z">
+<meta property="article:modified_time" content="2024-05-23T09:35:06.623Z">
 <meta property="article:author" content="Yw">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -235,7 +235,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.6k 字
+          2.8k 字
         
       </span>
     
@@ -246,7 +246,7 @@
         
         
         
-          22 分钟
+          24 分钟
         
       </span>
     
@@ -304,9 +304,23 @@
 
 
 
-<h4 id="loongarch"><a href="#loongarch" class="headerlink" title="loongarch"></a>loongarch</h4><p>位置：arch&#x2F;loongarch&#x2F;mm&#x2F;page.S</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.align 5<br>SYM_FUNC_START(copy_page)<br>	lu12i.w	t8, 1 &lt;&lt; (PAGE_SHIFT - 12)<br>	add.d	t8, t8, a0<br>1:<br>	ld.d	t0, a1, 0					# a1是源操作数的地址，a0是目的操作数的地址，（需要翻翻loongarch的abi了）<br>	ld.d	t1, a1, 8<br>	ld.d	t2, a1, 16<br>	ld.d	t3, a1, 24<br>	ld.d	t4, a1, 32<br>	ld.d	t5, a1, 40<br>	ld.d	t6, a1, 48<br>	ld.d	t7, a1, 56<br><br>	st.d	t0, a0, 0					# 这段代码看不懂了：1)为什么按照如下顺序排列？2)为什么没使用预取指令？<br>	st.d	t1, a0, 8<br>	ld.d	t0, a1, 64<br>	ld.d	t1, a1, 72<br>	st.d	t2, a0, 16<br>	st.d	t3, a0, 24<br>	ld.d	t2, a1, 80<br>	ld.d	t3, a1, 88<br>	st.d	t4, a0, 32<br>	st.d	t5, a0, 40<br>	ld.d	t4, a1, 96<br>	ld.d	t5, a1, 104<br>	st.d	t6, a0, 48<br>	st.d	t7, a0, 56<br>	ld.d	t6, a1, 112<br>	ld.d	t7, a1, 120<br>	addi.d	a0, a0, 128<br>	addi.d	a1, a1, 128<br><br>	st.d	t0, a0, -64<br>	st.d	t1, a0, -56<br>	st.d	t2, a0, -48<br>	st.d	t3, a0, -40<br>	st.d	t4, a0, -32<br>	st.d	t5, a0, -24<br>	st.d	t6, a0, -16<br>	st.d	t7, a0, -8<br><br>	bne	t8, a0, 1b<br>	jr	ra<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br></code></pre></td></tr></table></figure>
+<h4 id="loongarch"><a href="#loongarch" class="headerlink" title="loongarch"></a>loongarch</h4><p><a target="_blank" rel="noopener" href="https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-CN.html">ELF psABI</a></p>
+<p>位置：arch&#x2F;loongarch&#x2F;mm&#x2F;page.S</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.align 5<br>SYM_FUNC_START(copy_page)<br>	lu12i.w	t8, 1 &lt;&lt; (PAGE_SHIFT - 12)<br>	add.d	t8, t8, a0<br>1:<br>	ld.d	t0, a1, 0					# a1是源操作数的地址，a0是目的操作数的地址，（需要翻翻loongarch的abi了）<br>	ld.d	t1, a1, 8<br>	ld.d	t2, a1, 16<br>	ld.d	t3, a1, 24<br>	ld.d	t4, a1, 32<br>	ld.d	t5, a1, 40<br>	ld.d	t6, a1, 48<br>	ld.d	t7, a1, 56<br><br>	st.d	t0, a0, 0					# 1)为什么按照如下顺序排列？2)为什么没使用预取指令？<br>	st.d	t1, a0, 8<br>	ld.d	t0, a1, 64<br>	ld.d	t1, a1, 72<br>	st.d	t2, a0, 16<br>	st.d	t3, a0, 24<br>	ld.d	t2, a1, 80<br>	ld.d	t3, a1, 88<br>	st.d	t4, a0, 32<br>	st.d	t5, a0, 40<br>	ld.d	t4, a1, 96<br>	ld.d	t5, a1, 104<br>	st.d	t6, a0, 48<br>	st.d	t7, a0, 56<br>	ld.d	t6, a1, 112<br>	ld.d	t7, a1, 120<br>	addi.d	a0, a0, 128<br>	addi.d	a1, a1, 128<br><br>	st.d	t0, a0, -64<br>	st.d	t1, a0, -56<br>	st.d	t2, a0, -48<br>	st.d	t3, a0, -40<br>	st.d	t4, a0, -32<br>	st.d	t5, a0, -24<br>	st.d	t6, a0, -16<br>	st.d	t7, a0, -8<br><br>	bne	t8, a0, 1b<br>	jr	ra<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br></code></pre></td></tr></table></figure>
 
+<p>其实和arm64的实现几乎一致</p>
+<p>有以下两个问题：</p>
+<ul>
+<li><p>为什么未使用预取指令（loongarch64的预取指令是preld和preldx）？</p>
+<p>copy_page的访存行为非常简单，现代cache的硬件预取器已足够预取。</p>
+</li>
+<li><p>一次循环拷贝128字节数据，为什么不一次性从源地址中取出128字节?</p>
+<p>这会使得寄存器压力过大</p>
+</li>
+<li><p>为什么边取数据边存数据，不能取完再统一存入吗？</p>
+<p>cache读写都有对应的端口，存取数据可以并行执行</p>
+</li>
+</ul>
 
                 
               </div>
