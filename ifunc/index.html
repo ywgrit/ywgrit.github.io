@@ -33,7 +33,7 @@
 <meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_resolver_objdump.png">
 <meta property="og:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
 <meta property="article:published_time" content="2024-05-05T06:40:14.000Z">
-<meta property="article:modified_time" content="2024-05-25T13:14:55.207Z">
+<meta property="article:modified_time" content="2024-05-25T13:20:20.305Z">
 <meta property="article:author" content="Yw">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_debug.png">
@@ -322,21 +322,16 @@
 
 
 
-<h3 id="第三步，gdb跟踪"><a href="#第三步，gdb跟踪" class="headerlink" title="第三步，gdb跟踪"></a>第三步，gdb跟踪</h3><p>1、先start到main函数入口</p>
-<p><img src="/../img/linker/ifunc/ifunc_memcmp_debug.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_debug"></p>
-<p>2、step到memcmp调用处</p>
-<p>可能需要多试几次，因为rand()的结果是随机的。为什么不直接调用memcmp，而是在rand()%2时才调用memmcp呢？因为我们都知道由于plt的存在，在函数第一次被调用时才会真正执行重定位，那么为了避免编译器分析出memcmp这个函数调用一定会被执行导致在加载时直接重定位，我们就加了一个判断条件。</p>
+<h3 id="第三步，gdb跟踪"><a href="#第三步，gdb跟踪" class="headerlink" title="第三步，gdb跟踪"></a>第三步，gdb跟踪</h3><h3 id="1、先start到main函数入口"><a href="#1、先start到main函数入口" class="headerlink" title="1、先start到main函数入口"></a>1、先start到main函数入口</h3><p><img src="/../img/linker/ifunc/ifunc_memcmp_debug.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_debug"></p>
+<h3 id="2、step到memcmp调用处"><a href="#2、step到memcmp调用处" class="headerlink" title="2、step到memcmp调用处"></a>2、step到memcmp调用处</h3><p>可能需要多试几次，因为rand()的结果是随机的。为什么不直接调用memcmp，而是在rand()%2时才调用memmcp呢？因为我们都知道由于plt的存在，在函数第一次被调用时才会真正执行重定位，那么为了避免编译器分析出memcmp这个函数调用一定会被执行导致在加载时直接重定位，我们就加了一个判断条件。</p>
 <p><img src="/../img/linker/ifunc/ifunc_memcmp_call_plt.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_call_plt"></p>
 <p>可以看到，调用memcmp其实是调用转到memcmp对应的plt表项。</p>
-<p>3、进入memcmp 的plt表项</p>
-<p>memcmp的plt表项会查看对应的got.plt表项，got.plt表项中存放的是函数的真正地址。</p>
+<h3 id="3、进入memcmp-的plt表项"><a href="#3、进入memcmp-的plt表项" class="headerlink" title="3、进入memcmp 的plt表项"></a>3、进入memcmp 的plt表项</h3><p>memcmp的plt表项会查看对应的got.plt表项，got.plt表项中存放的是函数的真正地址。</p>
 <p>但是在第一次重定位之前，函数对应的got.plt表项应该是resolver函数地址的，因此第一次查询plt时，实际是执行resolver，将函数的真正地址存放到对应的.got.plt表项中后，之后再调用函数时，直接转到该地址处即可。</p>
 <p><img src="/../img/linker/ifunc/ifunc_memcmp_plt.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_plt"></p>
-<p>4、跳转到memcmp函数的resolver</p>
-<p><img src="/../img/linker/ifunc/ifunc_memcmp_imple.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_imple"></p>
+<h3 id="4、跳转到memcmp函数的resolver"><a href="#4、跳转到memcmp函数的resolver" class="headerlink" title="4、跳转到memcmp函数的resolver"></a>4、跳转到memcmp函数的resolver</h3><p><img src="/../img/linker/ifunc/ifunc_memcmp_imple.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_imple"></p>
 <p>？？？为什么直接进到memcmp的具体实现了，这说明resolver已经执行过了，什么时候执行的，resolver又是怎么实现的？</p>
-<p>5、寻找resolver的调用</p>
-<p>既然resolver已经执行过了，并且将函数的真实地址放在.got.plt表项中，那么我们可以watch该.got.plt表项，在第3步可以看到该.got.plt表项的地址是<code>*0x555555557fc8</code></p>
+<h3 id="5、寻找resolver的调用"><a href="#5、寻找resolver的调用" class="headerlink" title="5、寻找resolver的调用"></a>5、寻找resolver的调用</h3><p>既然resolver已经执行过了，并且将函数的真实地址放在.got.plt表项中，那么我们可以watch该.got.plt表项，在第3步可以看到该.got.plt表项的地址是<code>*0x555555557fc8</code></p>
 <p><img src="/../img/linker/ifunc/ifunc_memcmp_call_resolver.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_call_resolver"></p>
 <p>通过watch .got.plt表项，可以找到该.got.plt表项被修改的位置：<code>sysdeps/x86_64/dl-machine.h：412</code>（commit:ae515ba530be76d6627740ddc33a3a63f8c7e4f9）。</p>
 <p>再往上翻阅代码，可以发现，真正执行resolver的位置如下</p>
