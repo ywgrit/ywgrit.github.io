@@ -16,21 +16,23 @@
   <meta name="author" content="Yw">
   <meta name="keywords" content="">
   
-    <meta name="description" content="记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&amp;#x2">
+    <meta name="description" content="动态链接相关结构Auxiliary vector简介我们知道动态链接的程序的加载过程分成如下三步  内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息 内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库 程序加载完后，控制权限交给可执行文件  在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可">
 <meta property="og:type" content="article">
-<meta property="og:title" content="memopt">
-<meta property="og:url" content="http://example.com/memopt/index.html">
+<meta property="og:title" content="动态链接相关结构">
+<meta property="og:url" content="http://example.com/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/index.html">
 <meta property="og:site_name" content="YWgrit&#39;s blog">
-<meta property="og:description" content="记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题 memcmp在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。 x86位置：linux&#x2F;arch&amp;#x2">
+<meta property="og:description" content="动态链接相关结构Auxiliary vector简介我们知道动态链接的程序的加载过程分成如下三步  内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息 内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库 程序加载完后，控制权限交给可执行文件  在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2024-05-14T16:01:34.000Z">
-<meta property="article:modified_time" content="2024-05-23T13:03:08.492Z">
+<meta property="og:image" content="http://example.com/img/linker/dynamic_linker/process_stack_before_ld.png">
+<meta property="article:published_time" content="2024-05-27T12:57:47.000Z">
+<meta property="article:modified_time" content="2024-05-27T13:01:31.667Z">
 <meta property="article:author" content="Yw">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/img/linker/dynamic_linker/process_stack_before_ld.png">
   
   
   
-  <title>memopt - YWgrit&#39;s blog</title>
+  <title>动态链接相关结构 - YWgrit&#39;s blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -212,7 +214,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="memopt"></span>
+            <span id="subtitle" data-typed-text="动态链接相关结构"></span>
           
         </div>
 
@@ -223,8 +225,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2024-05-15 00:01" pubdate>
-          2024年5月15日 凌晨
+        <time datetime="2024-05-27 20:57" pubdate>
+          2024年5月27日 晚上
         </time>
       </span>
     
@@ -235,7 +237,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.8k 字
+          1.7k 字
         
       </span>
     
@@ -246,7 +248,7 @@
         
         
         
-          23 分钟
+          15 分钟
         
       </span>
     
@@ -292,34 +294,42 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">memopt</h1>
+            <h1 style="display: none">动态链接相关结构</h1>
             
             
               <div class="markdown-body">
                 
-                <p>记录一下阅读memcpy&#x2F;memcmp&#x2F;memmove时碰到的一些问题</p>
-<h2 id="memcmp"><a href="#memcmp" class="headerlink" title="memcmp"></a>memcmp</h2><p>在plain版本中，copy 大块会调用__vm_copy函数按页为单位进行拷贝。此时只是将页面设置为copy on write，待目的地址被写入数据时，才会调用copy_page函数按页面为单位进行数据copy。copy_page的实现如下。</p>
-<h4 id="x86"><a href="#x86" class="headerlink" title="x86"></a>x86</h4><p>位置：linux&#x2F;arch&#x2F;x86&#x2F;lib&#x2F;copy_page_64.S</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><code class="hljs assembly">	ALIGN<br>SYM_FUNC_START(copy_page)<br>	ALTERNATIVE &quot;jmp copy_page_regs&quot;, &quot;&quot;, X86_FEATURE_REP_GOOD # X86_FEATURE_REP_GOOD是Linux内核中的一个标志，表示某些x86 CPU在使用带有 REP 前缀的字符串操作指令时性能表现良好（例如 REP MOVSB, REP STOSB 等）<br>	movl	$4096/8, %ecx 					# movsq一次拷贝8字节<br>	rep	movsq<br>	RET<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br><br>SYM_FUNC_START_LOCAL(copy_page_regs)<br>	subq	$2*8,	%rsp<br>	movq	%rbx,	(%rsp)					# x86中，rbx和r12由callee保存<br>	movq	%r12,	1*8(%rsp)<br><br>	movl	$(4096/64)-5,	%ecx			# 将拷贝一个页面分为两个阶段，1)存在数据预取，2)不存在数据预取。5是预取的数据距离当前操作的数据的距离，单位是cacheline的大小<br>	.p2align 4<br>.Loop64:									# 页面拷贝的第一阶段<br>	dec	%rcx<br>	movq	0x8*0(%rsi), %rax<br>	movq	0x8*1(%rsi), %rbx<br>	movq	0x8*2(%rsi), %rdx<br>	movq	0x8*3(%rsi), %r8<br>	movq	0x8*4(%rsi), %r9<br>	movq	0x8*5(%rsi), %r10<br>	movq	0x8*6(%rsi), %r11<br>	movq	0x8*7(%rsi), %r12<br><br>	prefetcht0 5*64(%rsi)					# 为什么距离是5个cacheline：猜测由benchmark决定的<br><br>	movq	%rax, 0x8*0(%rdi)<br>	movq	%rbx, 0x8*1(%rdi)<br>	movq	%rdx, 0x8*2(%rdi)<br>	movq	%r8,  0x8*3(%rdi)<br>	movq	%r9,  0x8*4(%rdi)<br>	movq	%r10, 0x8*5(%rdi)<br>	movq	%r11, 0x8*6(%rdi)<br>	movq	%r12, 0x8*7(%rdi)<br><br>	leaq	64 (%rsi), %rsi<br>	leaq	64 (%rdi), %rdi<br><br>	jnz	.Loop64<br><br>	movl	$5, %ecx<br>	.p2align 4<br>.Loop2:										# 页面拷贝的第二阶段<br>	decl	%ecx<br><br>	movq	0x8*0(%rsi), %rax<br>	movq	0x8*1(%rsi), %rbx<br>	movq	0x8*2(%rsi), %rdx<br>	movq	0x8*3(%rsi), %r8<br>	movq	0x8*4(%rsi), %r9<br>	movq	0x8*5(%rsi), %r10<br>	movq	0x8*6(%rsi), %r11<br>	movq	0x8*7(%rsi), %r12<br><br>	movq	%rax, 0x8*0(%rdi)<br>	movq	%rbx, 0x8*1(%rdi)<br>	movq	%rdx, 0x8*2(%rdi)<br>	movq	%r8,  0x8*3(%rdi)<br>	movq	%r9,  0x8*4(%rdi)<br>	movq	%r10, 0x8*5(%rdi)<br>	movq	%r11, 0x8*6(%rdi)<br>	movq	%r12, 0x8*7(%rdi)<br><br>	leaq	64(%rdi), %rdi<br>	leaq	64(%rsi), %rsi<br>	jnz	.Loop2<br><br>	movq	(%rsp), %rbx<br>	movq	1*8(%rsp), %r12<br>	addq	$2*8, %rsp<br>	RET<br>SYM_FUNC_END(copy_page_regs)<br><br></code></pre></td></tr></table></figure>
+                <h1 id="动态链接相关结构"><a href="#动态链接相关结构" class="headerlink" title="动态链接相关结构"></a>动态链接相关结构</h1><h2 id="Auxiliary-vector"><a href="#Auxiliary-vector" class="headerlink" title="Auxiliary vector"></a>Auxiliary vector</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>我们知道动态链接的程序的加载过程分成如下三步</p>
+<ol>
+<li>内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息</li>
+<li>内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库</li>
+<li>程序加载完后，控制权限交给可执行文件</li>
+</ol>
+<p>在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可执行文件，那么动态链接器在加载可执行文件时，需要知道该可执行文件的入口地址才行。因为内核在加载动态链接器时，已经得到了这些辅助信息，所以可以保存在进程的堆栈中，统一放置在Auxiliary vector，即辅助信息数组中。因此进程初始化时，其堆栈结构如下所示。</p>
+<img src="../img/linker/dynamic_linker/process_stack_before_ld.png" srcset="/img/loading.gif" lazyload alt="process_stack_before_ld" style="zoom:25%;" />
+
+<p>本质上，Auxiliary vector是内核 ELF 二进制加载器（内核源代码中的fs&#x2F;binfmt_elf.c）在将新的可执行映像加载到进程时（其实内核只会加载ld.so，剩下的都是ld.so加载的）构建的键值对列表。其定义如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// glibc: elf/elf.h</span><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span></span><br><span class="hljs-class">&#123;</span><br>  <span class="hljs-type">uint64_t</span> a_type;		<span class="hljs-comment">/* Entry type，如page size, 程序执行入口等 */</span><br>  <span class="hljs-class"><span class="hljs-keyword">union</span></span><br><span class="hljs-class">    &#123;</span><br>      <span class="hljs-type">uint64_t</span> a_val;		<span class="hljs-comment">/* Integer value */</span><br>      <span class="hljs-comment">/* We use to have pointer elements added here.  We cannot do that,</span><br><span class="hljs-comment">	 though, since it does not work when using 32-bit definitions</span><br><span class="hljs-comment">	 on 64-bit platforms and vice versa.  */</span><br>    &#125; a_un;<br>&#125; Elf64_auxv_t;<br></code></pre></td></tr></table></figure>
 
 
 
-<h4 id="loongarch"><a href="#loongarch" class="headerlink" title="loongarch"></a>loongarch</h4><p><a target="_blank" rel="noopener" href="https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-CN.html">ELF psABI</a></p>
-<p>位置：arch&#x2F;loongarch&#x2F;mm&#x2F;page.S</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><code class="hljs assembly">.align 5<br>SYM_FUNC_START(copy_page)<br>	lu12i.w	t8, 1 &lt;&lt; (PAGE_SHIFT - 12)<br>	add.d	t8, t8, a0<br>1:<br>	ld.d	t0, a1, 0					# a1是源操作数的地址，a0是目的操作数的地址，（需要翻翻loongarch的abi了）<br>	ld.d	t1, a1, 8<br>	ld.d	t2, a1, 16<br>	ld.d	t3, a1, 24<br>	ld.d	t4, a1, 32<br>	ld.d	t5, a1, 40<br>	ld.d	t6, a1, 48<br>	ld.d	t7, a1, 56<br><br>	st.d	t0, a0, 0					# 1)为什么按照如下顺序排列？2)为什么没使用预取指令？<br>	st.d	t1, a0, 8<br>	ld.d	t0, a1, 64<br>	ld.d	t1, a1, 72<br>	st.d	t2, a0, 16<br>	st.d	t3, a0, 24<br>	ld.d	t2, a1, 80<br>	ld.d	t3, a1, 88<br>	st.d	t4, a0, 32<br>	st.d	t5, a0, 40<br>	ld.d	t4, a1, 96<br>	ld.d	t5, a1, 104<br>	st.d	t6, a0, 48<br>	st.d	t7, a0, 56<br>	ld.d	t6, a1, 112<br>	ld.d	t7, a1, 120<br>	addi.d	a0, a0, 128<br>	addi.d	a1, a1, 128<br><br>	st.d	t0, a0, -64<br>	st.d	t1, a0, -56<br>	st.d	t2, a0, -48<br>	st.d	t3, a0, -40<br>	st.d	t4, a0, -32<br>	st.d	t5, a0, -24<br>	st.d	t6, a0, -16<br>	st.d	t7, a0, -8<br><br>	bne	t8, a0, 1b<br>	jr	ra<br>SYM_FUNC_END(copy_page)<br>EXPORT_SYMBOL(copy_page)<br></code></pre></td></tr></table></figure>
-
-<p>其实和arm64的实现几乎一致</p>
-<p>有以下两个问题：</p>
+<h3 id="访问Auxiliary-vector"><a href="#访问Auxiliary-vector" class="headerlink" title="访问Auxiliary vector"></a>访问Auxiliary vector</h3><p>在用户空间访问LD_SHOW_AUXV&#x3D;1，有以下几种方式</p>
 <ul>
-<li><p>为什么未使用预取指令（loongarch64的预取指令是preld和preldx）？</p>
-<p>copy_page的访存行为非常简单，现代cache的硬件预取器已足够预取。</p>
+<li><p>手动遍历，通过进程初始化的堆栈结构可知，获取到argv后，第二个NULL之后便是Auxiliary vector</p>
 </li>
-<li><p>一次循环拷贝128字节数据，为什么不一次性从源地址中取出128字节?</p>
-<p>这会使得寄存器压力过大</p>
+<li><p>通过glibc的库函数getauxval（glibc2.16引入）访问指定的辅助信息，不过参考<a target="_blank" rel="noopener" href="https://lwn.net/Articles/519085/">文档</a>，该库函数的引入似乎没什么必要。示例如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/auxv.h&gt;</span></span><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> &#123;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;The page size of system: %d\n&quot;</span>, getauxval(AT_PAGESZ));<br>    <br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
 </li>
-<li><p>为什么边取数据边存数据，不能取完再统一存入吗？</p>
-<p>cache读写都有对应的端口，存取数据可以并行执行</p>
+<li><p>每个进程创建后，其对应的auxiliary vector也存放在<code>/proc/PID/auxv</code>文件中</p>
 </li>
+<li><p>在shell中，可以通过在命令前设置<code>LD_SHOW_AUXV=1</code>来查看auxiliary vector，示例如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs bash">LD_SHOW_AUXV=1 <span class="hljs-built_in">ls</span><br><br>&lt;&lt;!<br>AT_SYSINFO_EHDR:      0x7fff721ae000<br>AT_??? (0x33): 0xe30<br>AT_HWCAP:             bfebfbff<br>AT_PAGESZ:            4096<br>AT_CLKTCK:            100<br>AT_PHDR:              0x55d4c0948040<br>AT_PHENT:             56<br>AT_PHNUM:             13<br>AT_BASE:              0x7f0095502000<br>AT_FLAGS:             0x0<br>AT_ENTRY:             0x55d4c094e7d0<br>AT_UID:               1000<br>AT_EUID:              1000<br>AT_GID:               1000<br>AT_EGID:              1000<br>AT_SECURE:            0<br>AT_RANDOM:            0x7fff72196b39<br>AT_HWCAP2:            0x2<br>AT_EXECFN:            /usr/bin/ls<br>AT_PLATFORM:          x86_64<br>!<br></code></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="被使用的地方"><a href="#被使用的地方" class="headerlink" title="被使用的地方"></a>被使用的地方</h3><p>在动态链接器中，以下地方会用到这些辅助信息</p>
+<ul>
+<li>glibc的中的ifunc的resolver中，一般会检测cpu_features，这些信息是保存在类型为<code>AT_HWCAP*</code>的辅助信息中的，<code>AT_HWCAP*</code>辅助信息是bit mask</li>
+<li>动态链接器将控制权限交移给可执行文件时，此时需要知道可执行文件的执行入口、</li>
+<li>待补充</li>
 </ul>
 
                 
@@ -339,7 +349,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/glibc/" class="category-chain-item">glibc</a>
+  <a href="/categories/linker-loader/" class="category-chain-item">linker/loader</a>
   
   
 
@@ -359,8 +369,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>memopt</div>
-      <div>http://example.com/memopt/</div>
+      <div>动态链接相关结构</div>
+      <div>http://example.com/动态链接相关结构/</div>
     </div>
     <div class="license-meta">
       
@@ -372,7 +382,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年5月15日</div>
+          <div>2024年5月27日</div>
         </div>
       
       
@@ -404,18 +414,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/" title="动态链接相关结构">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">动态链接相关结构</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/vtbl/" title="vtbl">
-                        <span class="hidden-mobile">vtbl</span>
+                      <a href="/memopt/" title="memopt">
+                        <span class="hidden-mobile">memopt</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
