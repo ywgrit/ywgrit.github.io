@@ -16,23 +16,22 @@
   <meta name="author" content="Yw">
   <meta name="keywords" content="">
   
-    <meta name="description" content="动态链接相关结构Auxiliary vector简介我们知道动态链接的程序的加载过程分成如下三步  内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息 内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库 程序加载完后，控制权限交给可执行文件  在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可">
+    <meta name="description" content="include&#x2F;linux&#x2F;page_ref.h: page_ref_count用来检测每个page正被多少个进程引用 do_wp_page-&gt;wp_can_reuse_anon_folio-&gt;folio_ref_count folio如果某个函数收到参数是一个指向了 tail page 的 page structure，那么这个函数是应该针对这个 tail pag">
 <meta property="og:type" content="article">
-<meta property="og:title" content="动态链接相关结构">
-<meta property="og:url" content="http://example.com/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/index.html">
+<meta property="og:title" content="linux内存管理篇-基本数据结构">
+<meta property="og:url" content="http://example.com/linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AF%87-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/index.html">
 <meta property="og:site_name" content="YWgrit&#39;s blog">
-<meta property="og:description" content="动态链接相关结构Auxiliary vector简介我们知道动态链接的程序的加载过程分成如下三步  内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息 内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库 程序加载完后，控制权限交给可执行文件  在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可">
+<meta property="og:description" content="include&#x2F;linux&#x2F;page_ref.h: page_ref_count用来检测每个page正被多少个进程引用 do_wp_page-&gt;wp_can_reuse_anon_folio-&gt;folio_ref_count folio如果某个函数收到参数是一个指向了 tail page 的 page structure，那么这个函数是应该针对这个 tail pag">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/img/linker/dynamic_linker/process_stack_before_ld.png">
-<meta property="article:published_time" content="2024-05-27T12:57:47.000Z">
-<meta property="article:modified_time" content="2024-05-27T13:01:31.667Z">
+<meta property="article:published_time" content="2024-06-03T06:44:01.000Z">
+<meta property="article:modified_time" content="2024-06-09T02:47:33.502Z">
 <meta property="article:author" content="Yw">
+<meta property="article:tag" content="Linux Kernel">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/img/linker/dynamic_linker/process_stack_before_ld.png">
   
   
   
-  <title>动态链接相关结构 - YWgrit&#39;s blog</title>
+  <title>linux内存管理篇-基本数据结构 - YWgrit&#39;s blog</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -214,7 +213,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="动态链接相关结构"></span>
+            <span id="subtitle" data-typed-text="linux内存管理篇-基本数据结构"></span>
           
         </div>
 
@@ -225,8 +224,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2024-05-27 20:57" pubdate>
-          2024年5月27日 晚上
+        <time datetime="2024-06-03 14:44" pubdate>
+          2024年6月3日 下午
         </time>
       </span>
     
@@ -237,7 +236,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.7k 字
+          621 字
         
       </span>
     
@@ -248,7 +247,7 @@
         
         
         
-          15 分钟
+          6 分钟
         
       </span>
     
@@ -294,43 +293,23 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">动态链接相关结构</h1>
+            <h1 style="display: none">linux内存管理篇-基本数据结构</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="动态链接相关结构"><a href="#动态链接相关结构" class="headerlink" title="动态链接相关结构"></a>动态链接相关结构</h1><h2 id="Auxiliary-vector"><a href="#Auxiliary-vector" class="headerlink" title="Auxiliary vector"></a>Auxiliary vector</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>我们知道动态链接的程序的加载过程分成如下三步</p>
-<ol>
-<li>内核加载动态链接器ld.so，并为可执行文件创建相关进程，设置好进程的部分信息</li>
-<li>内核将控制权限交给动态链接器，动态链接器加载应用程序以及其需要使用到的动态库</li>
-<li>程序加载完后，控制权限交给可执行文件</li>
-</ol>
-<p>在第二步中，动态链接器需要知道可执行文件和本进程的一些辅助信息，例如动态链接器最后需要将控制权限交给可执行文件，那么动态链接器在加载可执行文件时，需要知道该可执行文件的入口地址才行。因为内核在加载动态链接器时，已经得到了这些辅助信息，所以可以保存在进程的堆栈中，统一放置在Auxiliary vector，即辅助信息数组中。因此进程初始化时，其堆栈结构如下所示。</p>
-<img src="../img/linker/dynamic_linker/process_stack_before_ld.png" srcset="/img/loading.gif" lazyload alt="process_stack_before_ld" style="zoom:25%;" />
+                <p>include&#x2F;linux&#x2F;page_ref.h: page_ref_count用来检测每个page正被多少个进程引用</p>
+<p>do_wp_page-&gt;wp_can_reuse_anon_folio-&gt;folio_ref_count</p>
+<h3 id="folio"><a href="#folio" class="headerlink" title="folio"></a>folio</h3><p>如果某个函数收到参数是一个指向了 tail page 的 page structure，那么这个函数是应该针对这个 tail page 上执行、还是在整个 compound page 上执行？</p>
+<p>任何函数，如果它必须要对整个 compound page 操作，但是却传入的只是一个 tail page，都必须将指向 tail page 结构的指针改为指向 head page 的指针。这通常是通过调用这个函数来实现的:</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs php">struct page *<span class="hljs-title function_ invoke__">compound_head</span>(struct page *page);<br></code></pre></td></tr></table></figure>
 
-<p>本质上，Auxiliary vector是内核 ELF 二进制加载器（内核源代码中的fs&#x2F;binfmt_elf.c）在将新的可执行映像加载到进程时（其实内核只会加载ld.so，剩下的都是ld.so加载的）构建的键值对列表。其定义如下</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// glibc: elf/elf.h</span><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span></span><br><span class="hljs-class">&#123;</span><br>  <span class="hljs-type">uint64_t</span> a_type;		<span class="hljs-comment">/* Entry type，如page size, 程序执行入口等 */</span><br>  <span class="hljs-class"><span class="hljs-keyword">union</span></span><br><span class="hljs-class">    &#123;</span><br>      <span class="hljs-type">uint64_t</span> a_val;		<span class="hljs-comment">/* Integer value */</span><br>      <span class="hljs-comment">/* We use to have pointer elements added here.  We cannot do that,</span><br><span class="hljs-comment">	 though, since it does not work when using 32-bit definitions</span><br><span class="hljs-comment">	 on 64-bit platforms and vice versa.  */</span><br>    &#125; a_un;<br>&#125; Elf64_auxv_t;<br></code></pre></td></tr></table></figure>
-
-
-
-<h3 id="访问Auxiliary-vector"><a href="#访问Auxiliary-vector" class="headerlink" title="访问Auxiliary vector"></a>访问Auxiliary vector</h3><p>在用户空间访问LD_SHOW_AUXV&#x3D;1，有以下几种方式</p>
-<ul>
-<li><p>手动遍历，通过进程初始化的堆栈结构可知，获取到argv后，第二个NULL之后便是Auxiliary vector</p>
-</li>
-<li><p>通过glibc的库函数getauxval（glibc2.16引入）访问指定的辅助信息，不过参考<a target="_blank" rel="noopener" href="https://lwn.net/Articles/519085/">文档</a>，该库函数的引入似乎没什么必要。示例如下</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/auxv.h&gt;</span></span><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> &#123;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;The page size of system: %d\n&quot;</span>, getauxval(AT_PAGESZ));<br>    <br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
-</li>
-<li><p>每个进程创建后，其对应的auxiliary vector也存放在<code>/proc/PID/auxv</code>文件中</p>
-</li>
-<li><p>在shell中，可以通过在命令前设置<code>LD_SHOW_AUXV=1</code>来查看auxiliary vector，示例如下</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs bash">LD_SHOW_AUXV=1 <span class="hljs-built_in">ls</span><br><br>&lt;&lt;!<br>AT_SYSINFO_EHDR:      0x7fff721ae000<br>AT_??? (0x33): 0xe30<br>AT_HWCAP:             bfebfbff<br>AT_PAGESZ:            4096<br>AT_CLKTCK:            100<br>AT_PHDR:              0x55d4c0948040<br>AT_PHENT:             56<br>AT_PHNUM:             13<br>AT_BASE:              0x7f0095502000<br>AT_FLAGS:             0x0<br>AT_ENTRY:             0x55d4c094e7d0<br>AT_UID:               1000<br>AT_EUID:              1000<br>AT_GID:               1000<br>AT_EGID:              1000<br>AT_SECURE:            0<br>AT_RANDOM:            0x7fff72196b39<br>AT_HWCAP2:            0x2<br>AT_EXECFN:            /usr/bin/ls<br>AT_PLATFORM:          x86_64<br>!<br></code></pre></td></tr></table></figure></li>
-</ul>
-<h3 id="被使用的地方"><a href="#被使用的地方" class="headerlink" title="被使用的地方"></a>被使用的地方</h3><p>在动态链接器中，以下地方会用到这些辅助信息</p>
-<ul>
-<li>glibc的中的ifunc的resolver中，一般会检测cpu_features，这些信息是保存在类型为<code>AT_HWCAP*</code>的辅助信息中的，<code>AT_HWCAP*</code>辅助信息是bit mask</li>
-<li>动态链接器将控制权限交移给可执行文件时，此时需要知道可执行文件的执行入口、</li>
-<li>待补充</li>
-</ul>
+<p>这个函数相对来说耗时很少，但是在对页面进行一次操作的过程中可能会被调用多次。这使得内核变大了（因为它是一个 inline  函数），并且也变慢了。一个接受 folio page 参数的函数就知道它收到的不会是 tail page，因此不需要调用  compound_head()。这样既节省了时间又节省了内存。  </p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a target="_blank" rel="noopener" href="https://www.infoq.cn/article/kcrxzhkloz9lyjzaasz0">解读 Linux 内存管理新特性 Memory folios</a></p>
+<p><strong>folio 的直接价值</strong></p>
+<p>1）减少太多冗余 compound_head 的调用。</p>
+<p>2）给开发者提示，看到 folio，就能认定这是 head page。</p>
+<p>3）修复潜在的 tail page 导致的 bug。</p>
 
                 
               </div>
@@ -339,27 +318,13 @@
             <div>
               <div class="post-metas my-3">
   
-    <div class="post-meta mr-3 d-flex align-items-center">
-      <i class="iconfont icon-category"></i>
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
       
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/linker-loader/" class="category-chain-item">linker/loader</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
+        <a href="/tags/Linux-Kernel/">#Linux Kernel</a>
+      
     </div>
-  
   
 </div>
 
@@ -369,8 +334,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>动态链接相关结构</div>
-      <div>http://example.com/动态链接相关结构/</div>
+      <div>linux内存管理篇-基本数据结构</div>
+      <div>http://example.com/linux内存管理篇-基本数据结构/</div>
     </div>
     <div class="license-meta">
       
@@ -382,7 +347,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年5月27日</div>
+          <div>2024年6月3日</div>
         </div>
       
       
@@ -414,9 +379,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AF%87-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="linux内存管理篇-基本数据结构">
+                      <a href="/debian%E5%8C%85%E6%9D%82%E7%96%91%E5%90%88%E9%9B%86/" title="debian包杂疑合集">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">linux内存管理篇-基本数据结构</span>
+                        <span class="hidden-mobile">debian包杂疑合集</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -424,8 +389,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/memopt/" title="memopt">
-                        <span class="hidden-mobile">memopt</span>
+                      <a href="/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/" title="动态链接相关结构">
+                        <span class="hidden-mobile">动态链接相关结构</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

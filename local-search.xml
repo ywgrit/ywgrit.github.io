@@ -4,6 +4,44 @@
   
   
   <entry>
+    <title>debian包杂疑合集</title>
+    <link href="/debian%E5%8C%85%E6%9D%82%E7%96%91%E5%90%88%E9%9B%86/"/>
+    <url>/debian%E5%8C%85%E6%9D%82%E7%96%91%E5%90%88%E9%9B%86/</url>
+    
+    <content type="html"><![CDATA[<p>接着调试gnu动态链接器，又没带原来的电脑，不想花时间重新编译glibc。了解到linux提供了带debug-symbol的libc：libc-dbg，可以直接调试。<code>apt install libc-dbg</code>安装后一看（笔者当时这台电脑的系统是ubuntu，遂用dpkg -L libc6-dbg），发现目录下并未找到ld和libc等文件，<code>apt update</code>后，还是没找到。遂<code>apt download libc6-dbg</code>，解压后目录如下</p><p><img src="/../img/package/libc6-dbg.png" alt="libc6-dbg"></p><p>没办法，去上交软件源看看吧</p><p><img src="/../img/package/sjtu_libc_dbg.png"></p><p>可以看到，上交软件源中的libc-dbg_2.31_ubuntu_amd64.deb分为5&#x2F;30&#x2F;2024更新的libc-dbg_2.31_ubuntu9.16_amd64.deb和4&#x2F;16&#x2F;2020更新的libc-dbg_2.31_ubuntu9_amd64.deb。但是只有后者才有ld和libc，如下所示。</p><p><img src="/../img/package/libc-dbg_2.31_ubuntu9_amd64.png" alt="libc-dbg_2.31_ubuntu9_amd64"></p><p>这是为什么呀？（太晚了明天接着看吧）</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>包管理</category>
+      
+    </categories>
+    
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>linux内存管理篇-基本数据结构</title>
+    <link href="/linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AF%87-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/"/>
+    <url>/linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E7%AF%87-%E5%9F%BA%E6%9C%AC%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/</url>
+    
+    <content type="html"><![CDATA[<p>include&#x2F;linux&#x2F;page_ref.h: page_ref_count用来检测每个page正被多少个进程引用</p><p>do_wp_page-&gt;wp_can_reuse_anon_folio-&gt;folio_ref_count</p><h3 id="folio"><a href="#folio" class="headerlink" title="folio"></a>folio</h3><p>如果某个函数收到参数是一个指向了 tail page 的 page structure，那么这个函数是应该针对这个 tail page 上执行、还是在整个 compound page 上执行？</p><p>任何函数，如果它必须要对整个 compound page 操作，但是却传入的只是一个 tail page，都必须将指向 tail page 结构的指针改为指向 head page 的指针。这通常是通过调用这个函数来实现的:</p><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs php">struct page *<span class="hljs-title function_ invoke__">compound_head</span>(struct page *page);<br></code></pre></td></tr></table></figure><p>这个函数相对来说耗时很少，但是在对页面进行一次操作的过程中可能会被调用多次。这使得内核变大了（因为它是一个 inline  函数），并且也变慢了。一个接受 folio page 参数的函数就知道它收到的不会是 tail page，因此不需要调用  compound_head()。这样既节省了时间又节省了内存。  </p><h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="https://www.infoq.cn/article/kcrxzhkloz9lyjzaasz0">解读 Linux 内存管理新特性 Memory folios</a></p><p><strong>folio 的直接价值</strong></p><p>1）减少太多冗余 compound_head 的调用。</p><p>2）给开发者提示，看到 folio，就能认定这是 head page。</p><p>3）修复潜在的 tail page 导致的 bug。</p>]]></content>
+    
+    
+    
+    <tags>
+      
+      <tag>Linux Kernel</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>动态链接相关结构</title>
     <link href="/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/"/>
     <url>/%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E7%9B%B8%E5%85%B3%E7%BB%93%E6%9E%84/</url>
