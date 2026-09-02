@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="./static/css/base.css" rel="stylesheet">
+    <link href="./static/css/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.font.im/css?family=Source+Serif+Pro%7CLato%7CInconsolata" rel="stylesheet"
+        type="text/css">
+    <title> compiler-pilot </title>
+    <!-- browser favicon -->
+    <link rel="shortcut icon" href="./static/img/favicon.png">
+    <style>
+        .font-sans {
+            font-family: 'Lato', 'SimHei', 'STHeiti', 'SimHei', 'Serif';
+        }
+
+        .font-serif {
+            font-family: 'Source Serif Pro', 'Songti SC', 'SimSun', 'Serif', serif;
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="https://jyywiki.cn/static/katex/katex.min.css">
+    <script defer src="https://jyywiki.cn/static/katex/katex.min.js"></script> -->
+    <link rel="stylesheet" href="./static/katex/katex.min.css">
+    <script defer src="./static/katex/katex.min.js"></script>
+    <!-- <script defer src="https://jyywiki.cn/static/katex/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+        crossorigin="anonymous"></script> -->
+    <script defer src="./static/katex/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                // customised options
+                // &#8226; auto-render specific keys, e.g.:
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                // &#8226; rendering keys, e.g.:
+                throwOnError: false
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="./static/reveal/reveal.css">
+    <link rel="stylesheet" href="./static/reveal/theme/simple.css" id="theme">
+    <link rel="stylesheet" href="./static/jyy/jyy.css">
+
+</head>
+
+<body class="d-flex flex-column h-100">
+
+    <div class="reveal">
+        <div class="slides">
+            <section><section><div class="center middle"><div style="width:100%"><div><h1 id="compiler-pilot" class="text-2xl mt-2 font-sans">compiler-pilot</h1>
+<hr/>
+<p class="font-serif my-1"><a href="https://github.com/ywgrit">ywgrit</a></p></div></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="overview" class="text-2xl mt-2 font-sans">Overview</h1><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">Loop engineering</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">Wiki</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">review系统</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">compiler-workflow</li>
+</ul></div></div></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="loop-engineering" class="text-2xl mt-2 font-sans">Loop Engineering</h1></div></div></div></section><section><div><h2 id="prompt" class="text-xl mt-2 pb-2 font-sans">单轮 Prompt 的问题</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">Agent 每轮都重新理解任务</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">前一轮的失败原因、dump 证据、benchmark 结果容易丢</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">prompt 越写越长，任务需求、领域知识、工作流规则混在一起</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">llm少次推理承担繁重任务，batch太大，注意力分散</li>
+</ul></div></div></section><section><div><h2 id="coding-review" class="text-xl mt-2 pb-2 font-sans">Coding / Review 分离</h2><div class="fragment" data-fragment-index="1"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>关注点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coding Agent</td>
+<td>按 plan 实现</td>
+</tr>
+<tr>
+<td>Review Agent</td>
+<td>找 bug、回归、缺测试、证据断点</td>
+</tr>
+<tr>
+<td>Human</td>
+<td>判断风险和下一层验证</td>
+</tr>
+</tbody>
+</table></div><div class="fragment" data-fragment-index="2"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+
+<blockquote>
+<p class="font-serif my-1">分离的价值：LLM的workaound特性不可避免，开启新上下文避免agent自我欺骗</p>
+</blockquote></div></div></section><section><div><h2 id="loop" class="text-xl mt-2 pb-2 font-sans">Loop中在每一次迭代中应该沉淀什么？</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">注入的提示</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">读过的知识</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">dump / GDB / benchmark / perf 结果</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">尝试过但放弃的方向和原因</li>
+</ul></div></div></section><section><div><h2 id="loop-engineering" class="text-xl mt-2 pb-2 font-sans">Loop Engineering</h2>
+<p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/4a6dfc5f16c947d6a830f7da972d7c08.png" width="880px"/>
+</center></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="wiki" class="text-2xl mt-2 font-sans">Wiki</h1></div></div></div></section><section><div><h2 id="raw-source" class="text-xl mt-2 pb-2 font-sans">raw source 的缺陷</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">手册不具备任务导航功能</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">一个知识点分散在多个文档中，无法直接得到确定信息</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">Agent 每次直接读 source，都要重新检索、重新综合</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">原始资料不会自动沉淀实践中犯过的错误</li>
+</ul></div></div></section><section><div><h2 id="wiki" class="text-xl mt-2 pb-2 font-sans">Wiki 的核心变化</h2><div class="fragment" data-fragment-index="1"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>Raw sources
+  ↓
+Structured wiki pages
+  ↓
+Query indexes
+  ↓
+Task-specific retrieval
+</code></pre></div></div><div class="fragment" data-fragment-index="2"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+
+<blockquote>
+<p class="font-serif my-1">RAG 是每次问时重新找资料。<br/>
+Wiki 是把资料消化成可维护的中间表示。</p>
+</blockquote></div></div></section><section><div><h2 id="wiki" class="text-xl mt-2 pb-2 font-sans">Wiki 的好处</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">持久化：一次整理，多次复用</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">结构化：frontmatter / tags / sources / related</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">可导航：按问题、领域模块、领域技术点进入</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">可沉淀：agent 犯错后，把缺失知识补进 wiki</li>
+</ul></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">可验证：validate / generate-indices 保持健康</li>
+</ul></div></div></section><section><div><h2 id="gccwiki" class="text-xl mt-2 pb-2 font-sans">GCCWiki 结构</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/43515b722ada4b90ba79e21dae7a1037.png" width="715px"/>
+</center></div></div></section><section><div><h2 id="gccwiki" class="text-xl mt-2 pb-2 font-sans">为什么gccwiki需要联合搜索</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/b7720de2c0df4940b025169e002ce62c.png" width="900px"/>
+</center></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">联合搜索怎样实现</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/393f5ead105d40c39389b93bdf689f03.png" width="900px"/>
+</center></div></div></section><section><div><h2 id="gccwiki" class="text-xl mt-2 pb-2 font-sans">gccwiki具体查询流程</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/866e5119518949b69e66423a603464a5.png" width="900px"/>
+</center></div></div></section><section><div><h2 id="inline-pass" class="text-xl mt-2 pb-2 font-sans">案例一：Inline Pass 修复</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/412bd5826a4e4d48a41fc9677563905c.png" width="715px"/>
+</center></div></div></section><section><div><h2 id="mysql" class="text-xl mt-2 pb-2 font-sans">案例二：mysql优化</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/2c93a9652086495c865c088e1a910931.png" width="900px"/>
+</center></div></div></section><section><div><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/9e4cf507a7054c1c8cc17800c618049e.png" width="1050px"/>
+</center></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="review" class="text-2xl mt-2 font-sans">Review 系统</h1></div></div></div></section><section><div><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/f8f7980db6724fed8525447ed5dffb9e.png" width="1050px"/>
+</center></div></section><section><div><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/88ea089a42234c74ba86724f5363db3f.png" width="1050px"/>
+</center></div></section><section><div><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/eb568743ad3148ac96c0738f8cd40763.png" width="1050px"/>
+</center></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="compiler-workflow" class="text-2xl mt-2 font-sans">compiler-workflow</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">设计原则</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">GCC 开发是 correctness-dominated</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">默认交付物是可审查文档，而不是补丁</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">pass 开发先参考领域特定知识产出 <code>docs/draft.md</code></li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">bug 修复先参考领域特定知识产出 <code>docs/triage.md</code></li>
+</ul></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">人审后进入 agent loop，agent loop继续参考领域特定知识</li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">四部分组成</h2><div class="fragment" data-fragment-index="1"><table>
+<thead>
+<tr>
+<th>组成</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>draft / triage / plan</td>
+<td>把口头任务变成可审查设计</td>
+</tr>
+<tr>
+<td>GCCWiki</td>
+<td>agent 应该知道什么</td>
+</tr>
+<tr>
+<td>GCCSkill</td>
+<td>agent 应该怎么操作</td>
+</tr>
+<tr>
+<td>review系统</td>
+<td>保证代码质量</td>
+</tr>
+</tbody>
+</table></div><div class="fragment" data-fragment-index="2"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<blockquote>
+<p class="font-serif my-1">GCCWiki 是知识库</p>
+<p class="font-serif my-1">GCCSkill 是操作手册</p>
+</blockquote></div></div></section><section><div><h2 id="pass" class="text-xl mt-2 pb-2 font-sans">Pass 开发流程</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/34fae2ce815449db8168607d395cabaa.png" width="610px"/>
+</center></div></div></section><section><div><h2 id="bug" class="text-xl mt-2 pb-2 font-sans">Bug 修复流程</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/710603de385343d792b2a962c877cb16.png" width="610px"/>
+</center></div><div class="fragment" data-fragment-index="2"><blockquote>
+<p class="font-serif my-1">诊断阶段不改 GCC 源码。</p>
+</blockquote></div></div></section><section><div><h2 id="docsdraftmd" class="text-xl mt-2 pb-2 font-sans"><code>docs/draft.md</code> 要回答什么？</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">Pattern Recognition Strategy</li>
+</ul><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">Transformation Legality Checks</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">IR and Data-Flow Invariants</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">Pass Ordering with anchor-pass evidence</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">Files / APIs / Testing / Open Questions</li>
+</ul></div></div></section><section><div><h2 id="docstriagemd" class="text-xl mt-2 pb-2 font-sans"><code>docs/triage.md</code> 要回答什么？</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">trunk 复现状态</li>
+</ul><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">oracle validation，排除 UB</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">最小复现或 reduction 计划</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">failing pass / suspected component</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">dump / GDB evidence</li>
+</ul></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">root-cause hypothesis</li>
+</ul></div></div></section><section><div><h2 id="compiler-workflow" class="text-xl mt-2 pb-2 font-sans">compiler Workflow</h2>
+<p class="font-serif my-1"/><center>
+<img class="center" src="./static/img/a5890f5888fc44909ad9f557ef3bc3d5.png" width="880px"/>
+</center></div></section><section><div><h2 id="todo" class="text-xl mt-2 pb-2 font-sans">TODO</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">补更多真实 GCC pass / bug 案例</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">如何将agent的工作反馈沉淀到 wiki❓</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">如何组织wiki才能高效索引，跟踪agent执行任务的流程🤔</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">如何保证agent对于wiki维护质量🤔</li>
+</ul></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 style="color: #d32f2f;" class="text-2xl mt-2 font-sans">Q &amp; A</h1></div></div></div></section></section>
+        </div>
+    </div>
+
+    <script src="./static/reveal/reveal.js"></script>
+
+    <script>
+        Reveal.initialize({
+
+            width: 1024, height: 768,
+
+            slideNumber: 'c/t',
+            controlsTutorial: false,
+            progress: false,
+            hash: true,
+            center: false,
+            autoAnimateUnmatched: true,
+            autoAnimateEasing: 'ease-out',
+            autoAnimateDuration: 0.3,
+            transitionSpeed: 'fast'
+        });
+    </script>
+</body>
+
+</html>

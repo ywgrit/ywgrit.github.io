@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="./static/css/base.css" rel="stylesheet">
+    <link href="./static/css/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.font.im/css?family=Source+Serif+Pro%7CLato%7CInconsolata" rel="stylesheet"
+        type="text/css">
+    <title> gdb </title>
+    <!-- browser favicon -->
+    <link rel="shortcut icon" href="./static/img/favicon.png">
+    <style>
+        .font-sans {
+            font-family: 'Lato', 'SimHei', 'STHeiti', 'SimHei', 'Serif';
+        }
+
+        .font-serif {
+            font-family: 'Source Serif Pro', 'Songti SC', 'SimSun', 'Serif', serif;
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="https://jyywiki.cn/static/katex/katex.min.css">
+    <script defer src="https://jyywiki.cn/static/katex/katex.min.js"></script> -->
+    <link rel="stylesheet" href="./static/katex/katex.min.css">
+    <script defer src="./static/katex/katex.min.js"></script>
+    <!-- <script defer src="https://jyywiki.cn/static/katex/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+        crossorigin="anonymous"></script> -->
+    <script defer src="./static/katex/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                // customised options
+                // &#8226; auto-render specific keys, e.g.:
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                // &#8226; rendering keys, e.g.:
+                throwOnError: false
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="./static/reveal/reveal.css">
+    <link rel="stylesheet" href="./static/reveal/theme/simple.css" id="theme">
+    <link rel="stylesheet" href="./static/jyy/jyy.css">
+
+</head>
+
+<body class="d-flex flex-column h-100">
+
+    <div class="reveal">
+        <div class="slides">
+            <section><section><div class="center middle"><div style="width:100%"><div><h1 id="-" class="text-2xl mt-2 font-sans">调试-工具篇</h1>
+<hr/>
+<p class="font-serif my-1"><a href="https://github.com/ywgrit">ywgrit</a></p></div></div></div></section><section><div><h2 id="overview" class="text-xl mt-2 pb-2 font-sans">Overview</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">powerful commands</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">gdb script</li>
+</ul></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="powerful-commands" class="text-2xl mt-2 font-sans">powerful commands</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">前置信息</h2>
+<p class="font-serif my-1">操作系统为了安全起见，会有地址空间随机化（Address space layout randomization），默认是开启的。开启 ASLR，在每次程序运行时的时候，装载的可执行文件和共享库都会被映射到虚拟地址空间的不同地址处；而关掉 ASLR，则可以保证每次运行时都会被映射到虚拟地址空间的相同地址处。例如一个程序中调用malloc分配内存，每次运行程序时得到的内存地址是一样的。</p>
+<p class="font-serif my-1">调试器如gdb为了调试方便，默认是关闭aslr的，可以使用<code>set disable-randomization off</code>将aslr打开。</p>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>show<span class="w"> </span>disable-randomization
+Disabling<span class="w"> </span>randomization<span class="w"> </span>of<span class="w"> </span>debuggee<span class="err">'</span>s<span class="w"> </span>virtual<span class="w"> </span>address<span class="w"> </span>space<span class="w"> </span>is<span class="w"> </span>on.
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">断点</h2><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">break</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">condition</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">commands</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">rbreak</li>
+</ul></div></div></section><section><div><h2 id="break" class="text-xl mt-2 pb-2 font-sans">break</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 下面这种方式不行，因为会找不到arg</span>
+b<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">if</span><span class="w"> </span>arg<span class="w"> </span>cond
+
+
+<span class="c1"># 以下几种方式都可以</span>
+<span class="c1"># 1. 在具体行号上打断点</span>
+b<span class="w"> </span>line_number<span class="w"> </span><span class="k">if</span><span class="w"> </span>arg
+
+<span class="c1"># 2. 根据处理器的abi，用寄存器来代替参数，例如如果function只有一</span>
+<span class="c1">#    个参数arg的话，那么该参数会放置到rsi中</span>
+b<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">$rsi</span><span class="w"> </span>...
+
+<span class="c1"># 3. 使用command命令</span>
+b<span class="w"> </span><span class="k">function</span>
+<span class="nb">command</span>
+<span class="k">if</span><span class="w"> </span>arg<span class="w"> </span>!cond
+<span class="w">  </span><span class="k">continue</span>
+end
+</code></pre></div></div></section><section><div><h2 id="condition" class="text-xl mt-2 pb-2 font-sans">condition</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 在第N个断点处，加上条件cond，cond满足时断点才停止</span>
+<span class="c1"># 其中的cond可以通过"||"或者"&amp;&amp;"连接</span>
+condition<span class="w"> </span>N<span class="w"> </span>cond
+watch<span class="w"> </span>*addr<span class="w"> </span>cond
+
+<span class="c1"># 如果addr处的值被设置为xxx，则停下来</span>
+watch<span class="w"> </span>*addr<span class="w"> </span><span class="k">if</span><span class="w"> </span>*addr<span class="w"> </span><span class="o">==</span><span class="w"> </span>xxx
+</code></pre></div></div></section><section><div><h2 id="commands" class="text-xl mt-2 pb-2 font-sans">commands</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>#<span class="w"> </span>方式一：在<span class="nv">breakpoint</span>后执行<span class="nv">commands</span>
+<span class="k">break</span><span class="w"> </span><span class="nv">func</span>:<span class="mi">12</span>
+<span class="nv">command</span>
+...
+<span class="k">end</span>
+
+#<span class="w"> </span>方式二，指定第<span class="nv">N</span>个断点触发后执行命令
+<span class="nv">commands</span><span class="w"> </span><span class="nv">N</span>
+...
+<span class="k">end</span>
+</code></pre></div></div></section><section><div><h2 id="rbreak" class="text-xl mt-2 pb-2 font-sans">rbreak</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 在满足REGEXP正则表达式的函数上打断点</span>
+rbeak<span class="w"> </span>REGEXP
+
+<span class="c1"># 常用场景：不熟悉工程时，可以通过rbreak统一在所有名字相似的函数</span>
+<span class="c1"># 上打上断点，观察哪些函数会被执行，从而理解函数功能与方便调试</span>
+
+<span class="c1"># 例：弄清-fdump-tree-all选项调用了哪些打印函数</span>
+rb<span class="w"> </span>^dump_.*function*
+rb<span class="w"> </span>^func*
+rb<span class="w"> </span>func*
+rb<span class="w"> </span>^func
+rb<span class="w"> </span>func<span class="o">[</span><span class="m">0</span>-9<span class="o">]</span>
+</code></pre></div></div></section><section><div><h2 id="ignore" class="text-xl mt-2 pb-2 font-sans">ignore</h2>
+<p class="font-serif my-1">需求：</p>
+<p class="font-serif my-1">1）程序执行到文件xxx的第yyy行时停止，则直接b xxx:yyy。</p>
+<p class="font-serif my-1">2）如果这个断点会被触发多次，即xxx:yyy会被执行多次，我们只想要在变量zzz == 10的时候停止，则重新打断点：b xxx:yyy if zzz == 10。将这个断点记作 break-n</p>
+<p class="font-serif my-1">3）如果想要在break-n被触发前的某个位置停止，例如在xxx:(yyy-100)处停止，然后查看xxx:(yyy-100)到xxx:yyy这一段代码中，程序的状态。这时我们怎么在xxx:(yyy-100)中停住呢？直接在xxx:(yyy-100)处打断点是不对的，因为我们只想查看break-n被触发的那一次，xxx:(yyy-100)位置的状态</p></div></section><section><div><h2 id="ignore" class="text-xl mt-2 pb-2 font-sans">ignore</h2>
+<p class="font-serif my-1">解决方案：找到xxx:yyy被执行前一定会执行的另一位置，例如xxx:(yyy-200)，在此处打上断点，记为break-m</p>
+<p class="font-serif my-1">具体步骤如下：</p>
+<p class="font-serif my-1">ignore可以用来查看函数在某段时间内（起点和终点可由自己任意设置）被调用的次数</p>
+<p class="font-serif my-1">第一步、按上述说明打上断点break-m和break-n</p>
+<p class="font-serif my-1">第二步、忽视break-m的100000000（设置得足够大即可）次断点触发：ignore break-m 100000000</p>
+<p class="font-serif my-1">第三步、接着执行程序：c</p></div></section><section><div><h2 id="ignore" class="text-xl mt-2 pb-2 font-sans">ignore</h2>
+<p class="font-serif my-1">第四步、break-n被触发时，info breakpoints查看break-m被触发了多少次，即already hit x times中的x值</p>
+<p class="font-serif my-1">第五步、ignore break-m x-1</p>
+<p class="font-serif my-1">第六步、执行run，重新执行程序</p>
+<p class="font-serif my-1">第七步、程序会在break-m的第x次被触发时停住，从此处可以单步或者continue到xxx:(yyy-100)，这时我们便可以查看break-n被执行前的程序状态了</p></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">打印/显示</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 编辑指定的源码文件</span>
+<span class="c1"># 便于调试代码时增添注释</span>
+edit<span class="w"> </span>file
+
+<span class="c1"># 配合whatis/ptype expr使用</span>
+l<span class="w"> </span><span class="k">function</span>/struct
+
+<span class="c1"># '$'代表上一次命令的执行结果，即打印当前链表节点的下一个节点</span>
+p<span class="w"> </span>$.next
+
+<span class="c1"># 利用这种方法可以逐个遍历链表</span>
+p<span class="w"> </span>&lt;enter&gt;
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">打印/显示</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 将element地址处开始的内存当做一个数组，打印从element开始的number个数组元素，以type类型打印每个元素</span>
+p<span class="w"> </span>*<span class="o">(</span><span class="nb">type</span><span class="w"> </span>*<span class="o">)</span>element@number
+
+<span class="c1">## 显示历史命令</span>
+show<span class="w"> </span>commands
+
+<span class="c1"># 显示历史打印值</span>
+show<span class="w"> </span>values
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">宏</h2>
+<p class="font-serif my-1">需要使用-g3而不是-g，-g默认是-g2</p>
+<p class="font-serif my-1">Request debugging information and also use level to specify how much information.  The default level is 2.</p>
+<p class="font-serif my-1">Level 3 includes extra information, such as all the macro definitions present in the program.  Some debuggers support macro expansion when you use -g3.</p>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>info<span class="w"> </span>macro<span class="w"> </span>macro_name<span class="w">           </span><span class="c1"># 将宏扩展开后打印</span>
+macro<span class="w"> </span>define<span class="w"> </span>--<span class="w"> </span>Define<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>C/C++<span class="w"> </span>preprocessor<span class="w"> </span>macro.
+macro<span class="w"> </span>expand,<span class="w"> </span>macro<span class="w"> </span>exp<span class="w"> </span>--<span class="w"> </span>Fully<span class="w"> </span>expand<span class="w"> </span>any<span class="w"> </span>C/C++<span class="w"> </span>preprocessor<span class="w"> </span>macro<span class="w"> </span>invocations<span class="w"> </span><span class="k">in</span><span class="w"> </span>EXPRESSION.
+macro<span class="w"> </span>expand-once,<span class="w"> </span>macro<span class="w"> </span>exp1<span class="w"> </span>--<span class="w"> </span>Expand<span class="w"> </span>C/C++<span class="w"> </span>preprocessor<span class="w"> </span>macro<span class="w"> </span>invocations<span class="w"> </span>appearing<span class="w"> </span>directly<span class="w"> </span><span class="k">in</span><span class="w"> </span>EXPRESSION.
+macro<span class="w"> </span>list<span class="w"> </span>--<span class="w"> </span>List<span class="w"> </span>all<span class="w"> </span>the<span class="w"> </span>macros<span class="w"> </span>defined<span class="w"> </span>using<span class="w"> </span>the<span class="w"> </span><span class="sb">`</span>macro<span class="w"> </span>define<span class="err">'</span><span class="w"> </span>command.
+macro<span class="w"> </span>undef<span class="w"> </span>--<span class="w"> </span>Remove<span class="w"> </span>the<span class="w"> </span>definition<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>C/C++<span class="w"> </span>preprocessor<span class="w"> </span>macro<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>given<span class="w"> </span>name.
+</code></pre></div></div></section><section><div><h2 id="catch" class="text-xl mt-2 pb-2 font-sans">catch</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="nb">help</span><span class="w"> </span>catch
+Set<span class="w"> </span>catchpoints<span class="w"> </span>to<span class="w"> </span>catch<span class="w"> </span>events.
+
+List<span class="w"> </span>of<span class="w"> </span>catch<span class="w"> </span>subcommands:
+
+catch<span class="w"> </span>assert<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>failed<span class="w"> </span>Ada<span class="w"> </span>assertions,<span class="w"> </span>when<span class="w"> </span>raised.
+catch<span class="w"> </span>catch<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>an<span class="w"> </span>exception,<span class="w"> </span>when<span class="w"> </span>caught.
+catch<span class="w"> </span>exception<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>Ada<span class="w"> </span>exceptions,<span class="w"> </span>when<span class="w"> </span>raised.
+catch<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>calls<span class="w"> </span>to<span class="w"> </span>exec.
+catch<span class="w"> </span>fork<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>calls<span class="w"> </span>to<span class="w"> </span>fork.
+catch<span class="w"> </span>handlers<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>Ada<span class="w"> </span>exceptions,<span class="w"> </span>when<span class="w"> </span>handled.
+catch<span class="w"> </span>load<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>loads<span class="w"> </span>of<span class="w"> </span>shared<span class="w"> </span>libraries.
+catch<span class="w"> </span>rethrow<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>an<span class="w"> </span>exception,<span class="w"> </span>when<span class="w"> </span>rethrown.
+</code></pre></div></div></section><section><div><h2 id="catch" class="text-xl mt-2 pb-2 font-sans">catch</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="nb">help</span><span class="w"> </span>catch
+Set<span class="w"> </span>catchpoints<span class="w"> </span>to<span class="w"> </span>catch<span class="w"> </span>events.
+
+List<span class="w"> </span>of<span class="w"> </span>catch<span class="w"> </span>subcommands:
+
+catch<span class="w"> </span>signal<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>signals<span class="w"> </span>by<span class="w"> </span>their<span class="w"> </span>names<span class="w"> </span>and/or<span class="w"> </span>numbers.
+catch<span class="w"> </span>syscall<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>system<span class="w"> </span>calls<span class="w"> </span>by<span class="w"> </span>their<span class="w"> </span>names,<span class="w"> </span>groups<span class="w"> </span>and/or<span class="w"> </span>numbers.
+catch<span class="w"> </span>throw<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>an<span class="w"> </span>exception,<span class="w"> </span>when<span class="w"> </span>thrown.
+catch<span class="w"> </span>unload<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>unloads<span class="w"> </span>of<span class="w"> </span>shared<span class="w"> </span>libraries.
+catch<span class="w"> </span>vfork<span class="w"> </span>--<span class="w"> </span>Catch<span class="w"> </span>calls<span class="w"> </span>to<span class="w"> </span>vfork.
+
+<span class="c1"># catch exec/fork/syscall/vfork对于查看程序的执行过程非常有用</span>
+</code></pre></div></div></section><section><div><h2 id="catch" class="text-xl mt-2 pb-2 font-sans">catch</h2>
+<p class="font-serif my-1">从链接始，即collec2到lto的处理过程</p>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>collect2
+<span class="w">  </span>vfork-&gt;execve:<span class="w"> </span>ld
+<span class="w">    </span>vfork-&gt;execve:<span class="w"> </span>lto-wrapper
+<span class="w">      </span>vfork-&gt;execve:<span class="w"> </span>gcc
+<span class="w">        </span>vfork-&gt;execve:<span class="w"> </span>lto1
+lto属于ld中的一个中间过程
+调用栈如下
+exec_lto_wrapper
+all_symbols_read_handler
+plugin_call_all_symbols_read
+lang_process
+//<span class="w"> </span>lang_process:
+//<span class="w">   </span><span class="m">1</span>）先处理lto之前的链接过程
+//<span class="w">   </span><span class="m">2</span>）处理all_symbols_read_handler，执行lto优化
+//<span class="w">   </span><span class="m">3</span>）执行剩下的链接过程:open_input_bfds
+__libc_start_call_main
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">查看进程的地址映射图</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 查看进程的映射图，包含的对象，如进程中可执行程序，动态库的地址范围</span>
+<span class="c1"># 等同于查看proc/pid/maps</span>
+info<span class="w"> </span>proc<span class="w"> </span>mappings
+
+
+<span class="c1"># 查看各个对象具体的地址映射图，即各个模块的地址范围，如</span>
+<span class="c1"># .text/.bass/.data/heap/stack等</span>
+info<span class="w"> </span>files
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">栈被破坏时调试</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 检查栈帧地址属于进程的哪个对象</span>
+info<span class="w"> </span>proc<span class="w"> </span>mappings
+
+
+<span class="c1"># 查看属于所属对象的哪个模块</span>
+info<span class="w"> </span>files
+
+<span class="c1"># 根据objdump/readelf 访问该对象文件，找到栈帧对应的函数</span>
+</code></pre></div></div></section><section><div><h2 id="strace" class="text-xl mt-2 pb-2 font-sans">strace</h2>
+<p class="font-serif my-1">跟踪系统调用</p>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># -f追踪子进程</span>
+strace<span class="w"> </span>-o<span class="w"> </span>strace.log<span class="w"> </span>-f<span class="w"> </span>man<span class="w"> </span>ls
+
+<span class="c1"># 持续输出strace的结果</span>
+tail<span class="w"> </span>-f<span class="w"> </span>strace.log
+
+常见用途：查阅程序打开的文件
+案例：
+watch<span class="w"> </span>*addr，断点失效
+addr在程序运行初可能未分配内存，我们想知道addr的值何时被赋为xxx
+strace<span class="w"> </span>-o<span class="w"> </span>strace.log<span class="w"> </span>-f<span class="w"> </span>./exe
+grep<span class="w"> </span>mmap<span class="w"> </span>strace.log
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>b<span class="w"> </span>mmap<span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">addr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span>???
+</code></pre></div></div></section></section><section><section><div><h2 id="gdb" class="text-xl mt-2 pb-2 font-sans">gdb脚本</h2></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">默认/自定义脚本</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># /$HOME/.inputrc</span>
+<span class="nv">$if</span><span class="w"> </span>gdb
+<span class="s2">"\C-j"</span>:<span class="s2">"focus next\r"</span>
+<span class="s2">"\C-k"</span>:<span class="s2">"focus prev\r"</span>
+<span class="nv">$endif</span>
+</code></pre></div>
+
+<p class="font-serif my-1">gdb提供python接口</p>
+<p class="font-serif my-1">增强命令行提示：<a href="https://github.com/lebr0nli/GEP">GEP</a></p></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="qa" class="text-2xl mt-2 font-sans"><red>Q&amp;A<red/></red></h1></div></div></div></section></section>
+        </div>
+    </div>
+
+    <script src="./static/reveal/reveal.js"></script>
+
+    <script>
+        Reveal.initialize({
+
+            width: 1024, height: 768,
+
+            slideNumber: 'c/t',
+            controlsTutorial: false,
+            progress: false,
+            hash: true,
+            center: false,
+            autoAnimateUnmatched: true,
+            autoAnimateEasing: 'ease-out',
+            autoAnimateDuration: 0.3,
+            transitionSpeed: 'fast'
+        });
+    </script>
+</body>
+
+</html>

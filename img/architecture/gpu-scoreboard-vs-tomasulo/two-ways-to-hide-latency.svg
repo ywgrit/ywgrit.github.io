@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">CPU 与 GPU 隐藏延迟的两条路线</title>
+  <desc id="desc">左侧 CPU 在同一指令流中寻找独立乘法越过等待加载的加法；右侧 GPU 基线调度器在 W0 等待 R1 时切换到 W1 和 W2，直到 W0 就绪。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#cbd5e1"/>
+    </marker>
+    <pattern id="blockedHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="#4c1d2d"/>
+      <rect width="3" height="10" fill="#fb7185" opacity="0.45"/>
+    </pattern>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #f8fafc; }
+      .h1 { font-size: 30px; font-weight: 700; }
+      .h2 { font-size: 23px; font-weight: 700; }
+      .label { font-size: 18px; font-weight: 600; }
+      .small { font-size: 15px; fill: #cbd5e1; }
+      .tiny { font-size: 13px; fill: #cbd5e1; }
+      .cpuText { fill: #38bdf8; }
+      .gpuText { fill: #a78bfa; }
+      .readyText { fill: #34d399; }
+      .blockedText { fill: #fb7185; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 16px; }
+      .panel { fill: #182235; stroke: #334155; stroke-width: 2; }
+      .axis { stroke: #64748b; stroke-width: 2; marker-end: url(#arrow); }
+      .guide { stroke: #334155; stroke-width: 1; stroke-dasharray: 4 6; }
+      .flow { fill: none; stroke: #cbd5e1; stroke-width: 2.5; marker-end: url(#arrow); }
+      .mobile { display: none; }
+      .mTitle { font-size: 42px; font-weight: 700; }
+      .mHead { font-size: 38px; font-weight: 700; }
+      .mBody { font-size: 34px; font-weight: 600; }
+      @media (max-width: 600px) {
+        .desktop { display: none; }
+        .mobile { display: inline; }
+      }
+    </style>
+  </defs>
+
+  <g class="desktop">
+  <rect width="1200" height="760" fill="#111827"/>
+  <text x="600" y="46" text-anchor="middle" class="h1">同样遇到长延迟，两种“找活干”的方向</text>
+  <text x="600" y="75" text-anchor="middle" class="small">CPU 在一条流里挖掘指令级并行；GPU 从许多常驻 Warp 中选择另一个就绪现场</text>
+
+  <!-- CPU panel -->
+  <rect x="32" y="100" width="556" height="548" rx="22" class="panel"/>
+  <circle cx="66" cy="138" r="15" fill="#38bdf8"/>
+  <text x="92" y="146" class="h2">CPU：在同一条指令流里往后找</text>
+  <text x="58" y="181" class="small">动态窗口发现：后面的 mul 不依赖 R1，可以先执行</text>
+
+  <line x1="108" y1="230" x2="545" y2="230" class="axis"/>
+  <text x="78" y="236" class="small">时间</text>
+  <g class="tiny" text-anchor="middle">
+    <text x="177" y="216">cycle 0</text><text x="294" y="216">1</text>
+    <text x="411" y="216">2</text><text x="522" y="216">N</text>
+  </g>
+  <g>
+    <line x1="235" y1="238" x2="235" y2="502" class="guide"/>
+    <line x1="352" y1="238" x2="352" y2="502" class="guide"/>
+    <line x1="469" y1="238" x2="469" y2="502" class="guide"/>
+  </g>
+
+  <text x="58" y="286" class="label cpuText">I0</text>
+  <rect x="104" y="257" width="140" height="46" rx="10" fill="#075985" stroke="#38bdf8" stroke-width="2"/>
+  <text x="174" y="286" text-anchor="middle" class="mono">load R1</text>
+  <rect x="252" y="257" width="250" height="46" rx="10" fill="url(#blockedHatch)" stroke="#fb7185" stroke-width="2"/>
+  <text x="377" y="286" text-anchor="middle" class="label">等待内存返回 R1</text>
+  <circle cx="530" cy="280" r="10" fill="#34d399"/>
+  <text x="530" y="320" text-anchor="middle" class="tiny">完成</text>
+
+  <text x="58" y="371" class="label cpuText">I1</text>
+  <rect x="104" y="340" width="234" height="50" rx="10" fill="#4c1d2d" stroke="#fb7185" stroke-width="2"/>
+  <text x="221" y="371" text-anchor="middle" class="mono">add R2,R1,R3</text>
+  <text x="352" y="371" class="small blockedText">← R1 未就绪，阻塞</text>
+
+  <text x="58" y="456" class="label cpuText">I2</text>
+  <rect x="300" y="425" width="238" height="50" rx="10" fill="#064e3b" stroke="#34d399" stroke-width="2.5"/>
+  <text x="419" y="456" text-anchor="middle" class="mono">mul R4,R5,R6</text>
+  <path d="M218 396 C230 436 250 450 290 450" class="flow"/>
+  <text x="177" y="420" class="tiny readyText">发现独立工作</text>
+
+  <rect x="58" y="518" width="504" height="104" rx="14" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="78" y="548" class="label">先做能做的，再回头唤醒 I1</text>
+  <text x="78" y="577" class="small">代价：需要窗口、重命名、就绪选择与结果唤醒等深层机制。</text>
+  <text x="78" y="602" class="small">这里的“往后找”是动态硬件行为，不等于简单顺序执行。</text>
+
+  <!-- GPU panel -->
+  <rect x="612" y="100" width="556" height="548" rx="22" class="panel"/>
+  <circle cx="646" cy="138" r="15" fill="#a78bfa"/>
+  <text x="672" y="146" class="h2">GPU：这个 Warp 等着，先换另一个 Warp</text>
+  <text x="638" y="181" class="small">每行是一条独立的 Warp 指令流；调度器逐周期挑就绪者</text>
+
+  <g class="small" text-anchor="middle">
+    <text x="755" y="220">cycle 0</text><text x="875" y="220">cycle 1</text>
+    <text x="995" y="220">cycle 2</text><text x="1106" y="220">cycle N</text>
+  </g>
+  <g>
+    <line x1="812" y1="230" x2="812" y2="510" class="guide"/>
+    <line x1="932" y1="230" x2="932" y2="510" class="guide"/>
+    <line x1="1052" y1="230" x2="1052" y2="510" class="guide"/>
+  </g>
+
+  <text x="640" y="275" class="h2 gpuText">W0</text>
+  <rect x="710" y="242" width="100" height="50" rx="10" fill="#5b21b6" stroke="#a78bfa" stroke-width="2"/>
+  <text x="760" y="273" text-anchor="middle" class="mono">load R1</text>
+  <rect x="820" y="242" width="226" height="50" rx="10" fill="url(#blockedHatch)" stroke="#fb7185" stroke-width="2"/>
+  <text x="933" y="273" text-anchor="middle" class="label">W0 等 R1</text>
+  <rect x="1058" y="242" width="88" height="50" rx="10" fill="#064e3b" stroke="#34d399" stroke-width="2"/>
+  <text x="1102" y="273" text-anchor="middle" class="label">就绪</text>
+
+  <text x="640" y="371" class="h2 gpuText">W1</text>
+  <rect x="820" y="338" width="112" height="50" rx="10" fill="#064e3b" stroke="#34d399" stroke-width="2.5"/>
+  <text x="876" y="369" text-anchor="middle" class="mono">mul</text>
+  <path d="M786 298 C790 334 802 350 812 355" class="flow"/>
+  <text x="752" y="344" class="tiny">切换</text>
+
+  <text x="640" y="467" class="h2 gpuText">W2</text>
+  <rect x="940" y="434" width="112" height="50" rx="10" fill="#064e3b" stroke="#34d399" stroke-width="2.5"/>
+  <text x="996" y="465" text-anchor="middle" class="mono">add</text>
+  <path d="M908 395 C914 427 923 443 932 449" class="flow"/>
+  <text x="879" y="435" class="tiny">再切换</text>
+
+  <rect x="638" y="518" width="504" height="104" rx="14" fill="#0f172a" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="658" y="546" class="label">基线模型的重要边界</text>
+  <text x="658" y="573" class="small">硬件不会越过 W0 被阻塞的队头，动态发射同一 Warp 的后续 I2；</text>
+  <text x="658" y="599" class="small">编译器可能提前重排，而真实 GPU 代际与实现也会变化。</text>
+
+  <rect x="32" y="671" width="1136" height="60" rx="16" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+  <text x="600" y="698" text-anchor="middle" class="label">有用工作从哪里来？</text>
+  <text x="600" y="720" text-anchor="middle" class="small">CPU：同一线程的更深处　·　GPU：另一个已驻留且就绪的 Warp</text>
+  </g>
+
+  <g class="mobile">
+    <rect width="1200" height="760" fill="#111827"/>
+    <text x="600" y="65" text-anchor="middle" class="mTitle">隐藏延迟：两条找活干的路线</text>
+
+    <rect x="42" y="105" width="1116" height="245" rx="28" class="panel"/>
+    <text x="80" y="157" class="mHead cpuText">CPU：在同一条指令流里往后找</text>
+    <rect x="80" y="200" width="255" height="82" rx="18" fill="#075985" stroke="#38bdf8" stroke-width="4"/>
+    <text x="208" y="252" text-anchor="middle" class="mBody">load R1 等待</text>
+    <path d="M350 241 L455 241" class="flow"/>
+    <rect x="470" y="200" width="270" height="82" rx="18" fill="#4c1d2d" stroke="#fb7185" stroke-width="4"/>
+    <text x="605" y="252" text-anchor="middle" class="mBody blockedText">add 被 R1 阻塞</text>
+    <path d="M755 241 L850 241" class="flow"/>
+    <rect x="865" y="200" width="250" height="82" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="4"/>
+    <text x="990" y="252" text-anchor="middle" class="mBody readyText">先执行独立 mul</text>
+    <text x="600" y="326" text-anchor="middle" class="mBody">有用工作来自：同一线程的更深处</text>
+
+    <rect x="42" y="382" width="1116" height="265" rx="28" class="panel"/>
+    <text x="80" y="434" class="mHead gpuText">GPU：这个 Warp 等着，先换另一个 Warp</text>
+    <rect x="80" y="474" width="285" height="82" rx="18" fill="#4c1d2d" stroke="#fb7185" stroke-width="4"/>
+    <text x="223" y="526" text-anchor="middle" class="mBody blockedText">W0：load R1 等待</text>
+    <path d="M380 515 L475 515" class="flow"/>
+    <rect x="490" y="474" width="250" height="82" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="4"/>
+    <text x="615" y="526" text-anchor="middle" class="mBody readyText">W1：mul</text>
+    <path d="M755 515 L850 515" class="flow"/>
+    <rect x="865" y="474" width="250" height="82" rx="18" fill="#172554" stroke="#a78bfa" stroke-width="4"/>
+    <text x="990" y="526" text-anchor="middle" class="mBody gpuText">W2：add</text>
+    <text x="600" y="610" text-anchor="middle" class="mBody">W0 的队头不被越过；调度器选择其他就绪 Warp</text>
+
+    <rect x="42" y="675" width="1116" height="62" rx="22" fill="#1e293b" stroke="#475569" stroke-width="3"/>
+    <text x="600" y="718" text-anchor="middle" class="mBody">CPU 向深处找；GPU 在许多现场之间选</text>
+  </g>
+</svg>

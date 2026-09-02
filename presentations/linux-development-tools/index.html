@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="./static/css/base.css" rel="stylesheet">
+    <link href="./static/css/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.font.im/css?family=Source+Serif+Pro%7CLato%7CInconsolata" rel="stylesheet"
+        type="text/css">
+    <title> tech_talk_slide_hygon </title>
+    <!-- browser favicon -->
+    <link rel="shortcut icon" href="./static/img/favicon.png">
+    <style>
+        .font-sans {
+            font-family: 'Lato', 'SimHei', 'STHeiti', 'SimHei', 'Serif';
+        }
+
+        .font-serif {
+            font-family: 'Source Serif Pro', 'Songti SC', 'SimSun', 'Serif', serif;
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="https://jyywiki.cn/static/katex/katex.min.css">
+    <script defer src="https://jyywiki.cn/static/katex/katex.min.js"></script> -->
+    <link rel="stylesheet" href="./static/katex/katex.min.css">
+    <script defer src="./static/katex/katex.min.js"></script>
+    <!-- <script defer src="https://jyywiki.cn/static/katex/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+        crossorigin="anonymous"></script> -->
+    <script defer src="./static/katex/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                // customised options
+                // &#8226; auto-render specific keys, e.g.:
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                // &#8226; rendering keys, e.g.:
+                throwOnError: false
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="./static/reveal/reveal.css">
+    <link rel="stylesheet" href="./static/reveal/theme/simple.css" id="theme">
+    <link rel="stylesheet" href="./static/jyy/jyy.css">
+
+</head>
+
+<body class="d-flex flex-column h-100">
+
+    <div class="reveal">
+        <div class="slides">
+            <section><section><div class="center middle"><div style="width:100%"><div><h1 id="linux" class="text-2xl mt-2 font-sans">Linux开发环境配置</h1>
+<hr/>
+
+<p class="font-serif my-1"><a href="https://github.com/ywgrit">ywgrit</a></p></div></div></div></section><section><div><h2 id="overview" class="text-xl mt-2 pb-2 font-sans">Overview</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">工具的需求</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">写代码</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">编译</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">调试</li>
+</ul></div><div class="fragment" data-fragment-index="5"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">shell</li>
+</ul></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="_1" class="text-2xl mt-2 font-sans">工具的需求</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">开发/测试工作流</h2>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="nb">++--------------------------------------------------------------+</span>
+<span class="c">|</span><span class="nb">+--------------------------------------------------+</span><span class="c">           |</span>
+<span class="c">||</span><span class="nb">+---------------------------------+</span><span class="c">               |           |</span>
+<span class="c">|||</span><span class="nb">+----------------+</span><span class="c">               |               |           |</span>
+<span class="c">||||                |               |               |           |</span>
+<span class="c">vvvv                |N  Y           |N   Y          |N   Y      |</span>
+<span class="c">读代码 =</span><span class="nv">&gt;</span><span class="c"> 写代码 =</span><span class="nv">&gt;</span><span class="c"> 写完? </span><span class="nb">--</span><span class="nv">&gt;</span><span class="c"> 编译 =</span><span class="nv">&gt;</span><span class="c"> 正确? </span><span class="nb">--</span><span class="nv">&gt;</span><span class="c"> 运行 =</span><span class="nv">&gt;</span><span class="c"> 正确? </span><span class="nb">--</span><span class="nv">&gt;</span><span class="c"> 下一个功能</span>
+</code></pre></div><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升写代码的效率?</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升编译的效率?</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升调试的效率?</li>
+</ul></div></div></section></section><section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">写代码</h2><div class="fragment" data-fragment-index="1"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">STFW(search the friendly web)</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">RTFM(read the friendly munual)</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">RTFSC(read the friendly source code)</li>
+</ul>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/></div><div class="fragment" data-fragment-index="4"><p class="font-serif my-1">浏览网页时间 : 编码时间 = 9 : 1</p>
+<hr/></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">vimium</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="6"><ul class="list-disc font-serif">
+<li class="ml-8">neovim</li>
+</ul></div></div></section><section><div><h2 id="vimium" class="text-xl mt-2 pb-2 font-sans">vimium</h2><div class="fragment" data-fragment-index="1"><hr/>
+<p class="font-serif my-1">特性</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">平滑切换vim</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">标签页快速跳转</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">进入任一链接只需敲三下</li>
+</ul>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/07204a783acc4b0eac8bceea7b7c9187.png" width="600px"/>
+        </td>
+    </tr>
+</table></div></div></section><section><div><h2 id="vimium" class="text-xl mt-2 pb-2 font-sans">vimium</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">拷贝粘贴/搜索</li>
+</ul>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/a9e698b549804ae8bc23e2faac01bf69.png" width="600px"/>
+        </td>
+    </tr>
+</table>
+<hr/>
+<hr/>
+<hr/></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">标签页跳转<ul class="list-disc font-serif">
+<li class="ml-8">J,gT/K,gt:跳转到上一个(左边)/下一个(右边)标签页</li>
+<li class="ml-8">g0/g$:跳转到第一个/最后一个标签页\</li>
+<li class="ml-8">^:跳转到上一次访问的标签页</li>
+</ul>
+</li>
+</ul></div></div></section><section><div><h2 id="neovim" class="text-xl mt-2 pb-2 font-sans">neovim</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">为什么不是vim，而是neovim</p></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">更新更快, 添加的新功能更多<ul class="list-disc font-serif">
+<li class="ml-8">内置lsp的支持</li>
+<li class="ml-8">支持lua配置</li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">很多插件依赖 neovim 新特性，或者只能在 vim 上勉强使用<ul class="list-disc font-serif">
+<li class="ml-8">Treesitter：更加的智能和高效的高亮。原始的 vim 中只能按照正则匹配来高亮关键字，但是 treesitter 可以区分什么是函数、成员、类、宏等定义</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">社区更活跃<ul class="list-disc font-serif">
+<li class="ml-8">vim(21455 commits) 和 neovim(32860 commits) 的开发者数量差距明显</li>
+</ul>
+</li>
+</ul></div></div></section><section><div><h2 id="lsp" class="text-xl mt-2 pb-2 font-sans">lsp</h2><div class="fragment" data-fragment-index="1"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">不同的语言需要不同的 Language Server，比如 C/C++ 需要 clangd/ccls, Rust 语言采用 rust analyzer</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">配合bear生成compile_commands.json，使用方便</li>
+</ul>
+<div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>bear -- compilation command
+</code></pre></div></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">不同的编辑器按照 lsp 的规范和 language server 通信</li>
+</ul></div><div class="fragment" data-fragment-index="4"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="nb">+------------------------+</span><span class="c">    </span><span class="nb">+---------------+</span>
+<span class="c">|      Editor            |    |Language Server|</span>
+<span class="nb">+------------------------+</span><span class="c">    </span><span class="nb">+---------------+</span>
+<span class="c">|     Emacs              |    |               |</span>
+<span class="c">|     Neovim             </span><span class="nb">+--</span><span class="nv">&gt;</span><span class="c"> |      clangd   |</span>
+<span class="c">|     Visual Studio Code |    |               |</span>
+<span class="nb">+------------------------+</span><span class="c">    </span><span class="nb">+---------------+</span>
+</code></pre></div></div></div></section><section><div><h2 id="shell" class="text-xl mt-2 pb-2 font-sans">shell</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">更现代的CLI工具</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">ripgrep<ul class="list-disc font-serif">
+<li class="ml-8">部分场景比grep快接近一个数量级</li>
+<li class="ml-8">自动忽略.gitignore和.ignore中指定的文件</li>
+<li class="ml-8">和grep大部分使用规则兼容，将grep命令中的"grep"字符串替换为"rg"即可</li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">ranger<ul class="list-disc font-serif">
+<li class="ml-8">彻底摆脱GUI文件管理器</li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">fzf（瑞士军刀）<ul class="list-disc font-serif">
+<li class="ml-8">极速</li>
+<li class="ml-8">完美体现Unix philosophy</li>
+</ul>
+</li>
+</ul></div></div></section><section><div><h2 id="shell" class="text-xl mt-2 pb-2 font-sans">shell</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">利用shell script</p></div><div class="fragment" data-fragment-index="2"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># 定义函数：清空行、输出路径、复制到tmux剪贴板</span>
+<span class="c1"># xclip依赖于图形界面，故没法使用</span>
+<span class="n">function</span><span class="w"> </span><span class="n">_clear_line_pwd_clipboard</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">zle</span><span class="w"> </span><span class="n">kill</span><span class="o">-</span><span class="n">whole</span><span class="o">-</span><span class="n">line</span><span class="w">            </span><span class="c1"># 清空当前行</span>
+<span class="w">  </span><span class="n">local</span><span class="w"> </span><span class="n">current_path</span><span class="o">=$</span><span class="p">(</span><span class="n">pwd</span><span class="p">)</span><span class="w">      </span><span class="c1"># 获取当前路径</span>
+<span class="w">  </span><span class="n">echo</span><span class="w"> </span><span class="o">$</span><span class="n">current_path</span><span class="w">             </span><span class="c1"># 输出路径</span>
+
+<span class="w">  </span><span class="c1"># 利用tmux进行复制粘贴</span>
+<span class="w">  </span><span class="n">echo</span><span class="w"> </span><span class="o">-</span><span class="n">n</span><span class="w"> </span><span class="o">$</span><span class="n">current_path</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">tmux</span><span class="w"> </span><span class="nb">load</span><span class="o">-</span><span class="n">buffer</span>
+<span class="w">  </span><span class="n">zle</span><span class="w"> </span><span class="n">redisplay</span>
+<span class="p">}</span>
+<span class="n">zle</span><span class="w"> </span><span class="o">-</span><span class="n">N</span><span class="w"> </span><span class="n">_clear_line_pwd_clipboard</span>
+
+<span class="c1"># 将上述功能绑定为CTRL + g</span>
+<span class="n">bindkey</span><span class="w"> </span><span class="s1">'^G'</span><span class="w"> </span><span class="n">_clear_line_pwd_clipboard</span>
+</code></pre></div></div></div></section></section><section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">编译</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">Compilation &amp; Assembly</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">编译缓存：ccache</li>
+</ul></div><div class="fragment" data-fragment-index="3"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code>bear<span class="w"> </span>--<span class="w"> </span>make<span class="w"> </span>-j<span class="k">$(</span>nproc<span class="k">)</span>
+
+without<span class="w"> </span>ccache<span class="w">                                     </span><span class="m">2</span>:14.76<span class="w"> </span>total
+with<span class="w"> </span>ccache<span class="w"> </span>first<span class="w"> </span><span class="nb">time</span><span class="w">                             </span><span class="m">2</span>:42.42<span class="w"> </span>total
+make<span class="w"> </span>clean<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>with<span class="w"> </span>ccache<span class="w"> </span>second<span class="w"> </span><span class="nb">time</span><span class="w">               </span><span class="m">40</span>.062<span class="w"> </span>total
+</code></pre></div>
+
+<hr/>
+<hr/>
+<hr/></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">Linking</li>
+</ul></div><div class="fragment" data-fragment-index="5"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># Just modified several compilation unit</span>
+with<span class="w"> </span>mold<span class="w">                            </span><span class="m">1</span>.433<span class="w"> </span>total
+</code></pre></div></div></div></section></section><section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">调试</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">prerequisite<ul class="list-disc font-serif">
+<li class="ml-8">STFW: 工具的演进过程中隐藏了很多有用信息，如gdb是GNU readline工具</li>
+<li class="ml-8">RTFM: gdb提供了完备的编程接口<ul class="list-disc font-serif">
+<li class="ml-8">.gdbinit</li>
+<li class="ml-8">python接口</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">configure<ul class="list-disc font-serif">
+<li class="ml-8">readline: 默认的配置文件/etc/inputrc和$HOME/.inputrc</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="3"><div class="codehilite"><pre class="bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><span/><code><span class="c1"># gdb 窗口切换快捷键</span>
+<span class="nv">$if</span><span class="w"> </span>gdb
+<span class="s2">"\C-j"</span>:<span class="s2">"focus next\r"</span>
+<span class="s2">"\C-k"</span>:<span class="s2">"focus prev\r"</span>
+<span class="nv">$endif</span>
+</code></pre></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">调试</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">configure<ul class="list-disc font-serif">
+<li class="ml-8"><a href="https://github.com/lebr0nli/GEP">script</a><ul class="list-disc font-serif">
+<li class="ml-8">Ctrl+r for fzf history reverse search</li>
+<li class="ml-8">↑ key for partial string matching in history</li>
+<li class="ml-8">TAB for auto-completion with:<ul class="list-disc font-serif">
+<li class="ml-8">fzf (When fzf is installed)</li>
+<li class="ml-8">floating window (Similar to IPython's auto-completion)</li>
+</ul>
+</li>
+<li class="ml-8">fish-like autosuggestions (→ key to accept the suggestion)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="qa" class="text-2xl mt-2 font-sans"><red>Q&amp;A<red/></red></h1></div></div></div></section></section>
+        </div>
+    </div>
+
+    <script src="./static/reveal/reveal.js"></script>
+
+    <script>
+        Reveal.initialize({
+
+            width: 1024, height: 768,
+
+            slideNumber: 'c/t',
+            controlsTutorial: false,
+            progress: false,
+            hash: true,
+            center: false,
+            autoAnimateUnmatched: true,
+            autoAnimateEasing: 'ease-out',
+            autoAnimateDuration: 0.3,
+            transitionSpeed: 'fast'
+        });
+    </script>
+</body>
+
+</html>

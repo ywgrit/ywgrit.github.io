@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">GPU 依赖处理的三种表达方式</title>
+  <desc id="desc">从运行时寄存器 Scoreboard，到固定延迟的静态调度，再到可变延迟的 Dependency Barrier，展示编译器后端、汇编编码、运行时硬件和 Warp Scheduler 的职责。</desc>
+  <defs>
+    <style>
+      .bg { fill: #0b1020; }
+      .panel { fill: #151d33; stroke: #3a4a70; stroke-width: 2; }
+      .panel2 { fill: #11192b; stroke: #53658f; stroke-width: 2; }
+      .title { fill: #f3f7ff; font: 700 34px "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .sub { fill: #aebbd5; font: 400 18px "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .h { fill: #f3f7ff; font: 700 24px "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .t { fill: #dbe5f8; font: 400 18px "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .small { fill: #aebbd5; font: 400 16px "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; }
+      .code { fill: #d8f3dc; font: 500 18px "Noto Sans Mono CJK SC", monospace; }
+      .accent { fill: #69dbb5; }
+      .warn { fill: #ffcf6e; }
+      .runtime { fill: #78a9ff; }
+      .line { stroke: #8195be; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .line2 { stroke: #69dbb5; stroke-width: 3; fill: none; marker-end: url(#arrow2); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8195be"/>
+    </marker>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#69dbb5"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text class="title" x="720" y="58" text-anchor="middle">依赖关系已知，完成时刻未必已知</text>
+  <text class="sub" x="720" y="92" text-anchor="middle">真正的分界：哪些工作编译期能做完，哪些状态必须留到运行时</text>
+
+  <rect class="panel2" x="350" y="118" width="740" height="94" rx="14"/>
+  <text class="code" x="390" y="158">producer:  LDG R1, [A]</text>
+  <text class="code" x="390" y="191">consumer: FADD R4, R1, R5</text>
+  <path class="line2" d="M 690 154 C 790 130, 790 198, 890 178"/>
+  <text class="small accent" x="785" y="143" text-anchor="middle">RAW：consumer 必须等 R1</text>
+
+  <rect class="panel" x="40" y="250" width="420" height="420" rx="18"/>
+  <text class="h" x="250" y="292" text-anchor="middle">1. 运行时 GPR Scoreboard</text>
+  <text class="small" x="250" y="321" text-anchor="middle">硬件根据寄存器编号发现依赖</text>
+  <rect class="panel2" x="78" y="350" width="344" height="96" rx="12"/>
+  <text class="code" x="103" y="384">Warp 0: R1 pending</text>
+  <text class="code" x="103" y="418">Warp 1: R1 ready</text>
+  <path class="line" d="M 250 446 L 250 486"/>
+  <rect class="panel2" x="78" y="486" width="344" height="80" rx="12"/>
+  <text class="t" x="250" y="520" text-anchor="middle">source / destination GPR</text>
+  <text class="t" x="250" y="548" text-anchor="middle">与 pending entries 比较</text>
+  <text class="small warn" x="250" y="606" text-anchor="middle">状态和比较逻辑都在 issue 路径上</text>
+  <text class="small" x="250" y="637" text-anchor="middle">bitmap 或稀疏 register entry 都属于这一类</text>
+
+  <rect class="panel" x="510" y="250" width="420" height="420" rx="18"/>
+  <text class="h" x="720" y="292" text-anchor="middle">2. 固定延迟：静态调度</text>
+  <text class="small" x="720" y="321" text-anchor="middle">依赖和 latency 都能在编译期确定</text>
+  <rect class="panel2" x="548" y="350" width="344" height="154" rx="12"/>
+  <text class="code" x="575" y="386">producer R1</text>
+  <text class="code accent" x="575" y="418">independent op</text>
+  <text class="code accent" x="575" y="450">independent op</text>
+  <text class="code" x="575" y="482">consumer R1</text>
+  <path class="line" d="M 720 504 L 720 544"/>
+  <rect class="panel2" x="548" y="544" width="344" height="72" rx="12"/>
+  <text class="t" x="720" y="575" text-anchor="middle">后端排指令，assembler 编码</text>
+  <text class="code" x="720" y="602" text-anchor="middle">stall cycles</text>
+  <text class="small" x="720" y="645" text-anchor="middle">先用有用工作填 latency，剩余间隔再等待</text>
+
+  <rect class="panel" x="980" y="250" width="420" height="420" rx="18"/>
+  <text class="h" x="1190" y="292" text-anchor="middle">3. 可变延迟：Barrier</text>
+  <text class="small" x="1190" y="321" text-anchor="middle">依赖已知，完成时刻只能运行时得知</text>
+  <rect class="panel2" x="1018" y="350" width="344" height="108" rx="12"/>
+  <text class="code" x="1045" y="386">LDG R1    write B2</text>
+  <text class="code" x="1045" y="425">FADD R4, R1, R5   wait B2</text>
+  <path class="line" d="M 1190 458 L 1190 498"/>
+  <rect class="panel2" x="1018" y="498" width="344" height="100" rx="12"/>
+  <text class="t" x="1190" y="532" text-anchor="middle">运行时硬件维护 B2</text>
+  <text class="code runtime" x="1190" y="566" text-anchor="middle">busy → completion → free</text>
+  <text class="small" x="1190" y="638" text-anchor="middle">WaitMask &amp; BusyMask 决定 consumer 能否发射</text>
+
+  <rect class="panel2" x="130" y="718" width="1180" height="126" rx="18"/>
+  <text class="h" x="720" y="756" text-anchor="middle">最后都汇入同一个问题：这个 Warp 的下一条指令现在能不能发射？</text>
+  <text class="t" x="215" y="807" text-anchor="middle">编译器后端</text>
+  <text class="t" x="480" y="807" text-anchor="middle">assembler</text>
+  <text class="t" x="740" y="807" text-anchor="middle">运行时依赖硬件</text>
+  <text class="t" x="1035" y="807" text-anchor="middle">eligible set</text>
+  <text class="t" x="1235" y="807" text-anchor="middle">Scheduler</text>
+  <path class="line2" d="M 300 801 L 390 801"/>
+  <path class="line2" d="M 565 801 L 630 801"/>
+  <path class="line2" d="M 855 801 L 940 801"/>
+  <path class="line2" d="M 1120 801 L 1150 801"/>
+  <text class="small" x="720" y="875" text-anchor="middle">静态关系尽量提前处理；运行时只保留必须等到执行时才能知道的状态</text>
+</svg>

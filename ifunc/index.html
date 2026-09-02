@@ -1,0 +1,729 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Yw">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="why最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小时就不能忍">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ifunc">
+<meta property="og:url" content="http://example.com/ifunc/index.html">
+<meta property="og:site_name" content="YWgrit&#39;s blog">
+<meta property="og:description" content="why最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小时就不能忍">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_debug.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_call_plt.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_plt.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_imple.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_call_resolver.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_enter_resolver.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_resolver_assemble.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_resolver_objdump.png">
+<meta property="og:image" content="http://example.com/img/linker/ifunc/libc_ifunc.png">
+<meta property="article:published_time" content="2024-05-05T06:40:14.000Z">
+<meta property="article:modified_time" content="2026-09-02T02:24:10.435Z">
+<meta property="article:author" content="Yw">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/img/linker/ifunc/ifunc_memcmp_debug.png">
+  
+  
+  
+  <title>ifunc - YWgrit&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"5Y31g5NDiF0gUogzdo3OAR8R-gzGzoHsz","app_key":"NuoZXWIUAbytcPcTM1i0PuPq","server_url":"https://5y31g5nd.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Ywgrit</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/presentations/">
+                
+                Presentations
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="ifunc"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2024-05-05 14:40" pubdate>
+          2024年5月5日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5.1k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          43 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ifunc</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="why"><a href="#why" class="headerlink" title="why"></a>why</h1><p>最近被问到了一个之前没思考过的问题。memcpy这类内存函数总所周知是cpu-feature bound的，即memcpy会根据cpu特性的实现多个版本。例如各个cpu支持的向量指令不同。现在问题来了，每一次调用memcpy时都要先通过cpuid或者xgetbv等指令先检测支持的指令集，再选择采用哪个版本吗？如果memcpy的数据量较大，那么检测时间或许可以忽略不计，但是数据量较小时就不能忍受了。通常，在程序的运行期间，一个函数引用对应的实现是不会改变的，因此只要解析一次函数调用即可，后续调用不必再解析。可以看出，该需求和plt很类似。</p>
+<h1 id="what"><a href="#what" class="headerlink" title="what"></a>what</h1><p>如果函数func有多个版本，为了避免每次调用func时都进行一遍版本选择，可以将函数func的符号类型定义为<code>STT_GNU_IFUNC</code>，并且为func实现相应的函数解析器。之后在elf装载时，会进行函数解析，将选择的版本记录下来，以后每一次调用func都会自动跳转到对应的版本。这就是ifunc。</p>
+<p>对该类函数的引用是通过<code>R_*_IRELATIVE</code> 重定位间接处理的，该重定位返回运行解析器的结果，即返回指向所选实现的函数指针。</p>
+<p>接下来以一个具体的例子来说明整个过程。</p>
+<h2 id="第一步，编译glibc"><a href="#第一步，编译glibc" class="headerlink" title="第一步，编译glibc"></a>第一步，编译glibc</h2><p>为了更方便调试，手动编译glibc，加入调试信息</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs shell"><span class="hljs-meta prompt_">#</span><span class="language-bash">!/bin/bash</span><br>mkdir -p build &amp;&amp; cd build<br>rm -rf ./*<br>CFLAGS=&quot;-g -g3 -ggdb -gdwarf-4 -O2&quot; CXXFLAGS=&quot;-g -g3 -ggdb -gdwarf-4 -O2&quot; ../configure  --enable-debug --prefix=$HOME/glibc<br>make -j$(($(nproc) - 1))<br>make install<br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="第二步，编写-x2F-编译测试用例"><a href="#第二步，编写-x2F-编译测试用例" class="headerlink" title="第二步，编写&#x2F;编译测试用例"></a>第二步，编写&#x2F;编译测试用例</h2><p>以如下代码为例，跟踪一下memcmp函数的重定位过程</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// demo</span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;string.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdlib.h&gt;</span></span><br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span> &#123;<br>    <span class="hljs-type">char</span> a[<span class="hljs-number">12</span>] = <span class="hljs-string">&quot;Hello world&quot;</span>;<br>    <span class="hljs-type">char</span> b[<span class="hljs-number">12</span>] = <span class="hljs-string">&quot;Hello homes&quot;</span>;<br><br>    <span class="hljs-keyword">if</span> (rand()%<span class="hljs-number">2</span> == <span class="hljs-number">1</span>)<br>        <span class="hljs-keyword">return</span> <span class="hljs-built_in">memcmp</span>(a, b, <span class="hljs-number">10</span>);<br><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs shell">gcc try_mem.c -o try_mem -g<br>patchelf --set-interpreter $(HOME)/glibc/lib/ld-linux-x86-64.so.2  --set-rpath $(HOME)/glibc/lib try_mem # 设置链接器和库搜索路径为刚才编译的debug版本的glibc<br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="第三步，gdb跟踪"><a href="#第三步，gdb跟踪" class="headerlink" title="第三步，gdb跟踪"></a>第三步，gdb跟踪</h2><h3 id="1、先start到main函数入口"><a href="#1、先start到main函数入口" class="headerlink" title="1、先start到main函数入口"></a>1、先start到main函数入口</h3><p><img src="/../img/linker/ifunc/ifunc_memcmp_debug.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_debug"></p>
+<h3 id="2、step到memcmp调用处"><a href="#2、step到memcmp调用处" class="headerlink" title="2、step到memcmp调用处"></a>2、step到memcmp调用处</h3><p>可能需要多试几次，因为rand()的结果是随机的。为什么不直接调用memcmp，而是在rand()%2时才调用memmcp呢？因为我们都知道由于plt的存在，在函数第一次被调用时才会真正执行重定位，那么为了避免编译器分析出memcmp这个函数调用一定会被执行导致在加载时直接重定位，我们就加了一个判断条件。</p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_call_plt.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_call_plt"></p>
+<p>可以看到，调用memcmp其实是调用转到memcmp对应的plt表项。</p>
+<h3 id="3、进入memcmp-的plt表项"><a href="#3、进入memcmp-的plt表项" class="headerlink" title="3、进入memcmp 的plt表项"></a>3、进入memcmp 的plt表项</h3><p>memcmp的plt表项会查看对应的got.plt表项，got.plt表项中存放的是函数的真正地址。</p>
+<p>但是在第一次重定位之前，函数对应的got.plt表项应该是resolver函数地址的，因此第一次查询plt时，实际是执行resolver，将函数的真正地址存放到对应的.got.plt表项中后，之后再调用函数时，直接转到该地址处即可。</p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_plt.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_plt"></p>
+<h3 id="4、跳转到memcmp函数的resolver"><a href="#4、跳转到memcmp函数的resolver" class="headerlink" title="4、跳转到memcmp函数的resolver"></a>4、跳转到memcmp函数的resolver</h3><p><img src="/../img/linker/ifunc/ifunc_memcmp_imple.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_imple"></p>
+<p>？？？为什么直接进到memcmp的具体实现了，这说明resolver已经执行过了，什么时候执行的，resolver又是怎么实现的？</p>
+<h3 id="5、寻找resolver的调用"><a href="#5、寻找resolver的调用" class="headerlink" title="5、寻找resolver的调用"></a>5、寻找resolver的调用</h3><p>既然resolver已经执行过了，并且将函数的真实地址放在.got.plt表项中，那么我们可以watch该.got.plt表项，在第3步可以看到该.got.plt表项的地址是<code>*0x555555557fc8</code></p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_call_resolver.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_call_resolver"></p>
+<p>通过watch .got.plt表项，可以找到该.got.plt表项被修改的位置：<code>sysdeps/x86_64/dl-machine.h：412</code>（commit:ae515ba530be76d6627740ddc33a3a63f8c7e4f9）。</p>
+<p>再往上翻阅代码，可以发现，真正执行resolver的位置如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">// sysdeps/x86_64/dl-machine.h</span><br><span class="hljs-comment">// 在进入main函数之前，动态链接器会进行符号重定位，将符号对应的真实地址放在got表项中。</span><br><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> __attribute__((always_inline))<br>elf_machine_rela(<span class="hljs-keyword">struct</span> link_map *<span class="hljs-built_in">map</span>, <span class="hljs-keyword">struct</span> r_scope_elem *scope[],<br>		 <span class="hljs-type">const</span> ElfW(Rela) *reloc, <span class="hljs-type">const</span> ElfW(Sym) *sym,<br>		 <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> r_found_version *version,<br>		 <span class="hljs-type">void</span> *<span class="hljs-type">const</span> reloc_addr_arg, <span class="hljs-type">int</span> skip_ifunc) &#123;<br>  ElfW(Addr) *<span class="hljs-type">const</span> reloc_addr = reloc_addr_arg;<br>  <span class="hljs-type">const</span> <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> <span class="hljs-type">int</span> r_type = ELFW(R_TYPE) (reloc-&gt;r_info);<br><br>	...<br>    &#123;<br>      <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">link_map</span> *<span class="hljs-title">sym_map</span> =</span> RESOLVE_MAP (<span class="hljs-built_in">map</span>, scope, &amp;sym, version,<br>					      r_type);<br>      ElfW(Addr) value = SYMBOL_ADDRESS (sym_map, sym, <span class="hljs-literal">true</span>);	<span class="hljs-comment">// value为link_map-&gt;l_addr + sym-&gt;st_value，如果符号非STT_GNU_IFUNC，那么value即为该符号在内存中的真实地址，否则value是该符号重定位的解析函数（resolver）地址</span><br><br>      <span class="hljs-keyword">if</span> (sym != <span class="hljs-literal">NULL</span><br>	  &amp;&amp; __glibc_unlikely (ELFW(ST_TYPE) (sym-&gt;st_info) == STT_GNU_IFUNC) <span class="hljs-comment">// 符号是STT_GNU_IFUNC类型时，调用解析函数选择对应的具体函数实现</span><br>	  &amp;&amp; __glibc_likely (sym-&gt;st_shndx != SHN_UNDEF)<br>	  &amp;&amp; __glibc_likely (!skip_ifunc))<br>	&#123;<br>	  ...<br>	  value = ((ElfW(Addr) (*) (<span class="hljs-type">void</span>)) value) (); <span class="hljs-comment">// 此时value为sysdeps/x86_64/multiarch/ifunc-memcmp.h：IFUNC_SELECTOR的地址，调用解析函数，根据处理器特性，选择最优的实现版本</span><br>	&#125;<br></code></pre></td></tr></table></figure>
+
+<p>那么我们在<code>value = ((ElfW(Addr) (*) (void)) value) ();</code>这一行处打上断点，就可以知道memcmp对应的resolver的具体实现了，如下所示。</p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_enter_resolver.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_enter_resolver"></p>
+<p>进入resolver，如下所示</p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_resolver_assemble.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_resolver_assemble"></p>
+<p>这里很奇怪:gdb无法显示resolver对应的源码。</p>
+<p>不过没关系，我们仍然可以找到对应的源码：每个ifunc函数都必须实现对应的resolver，因此resolver必定在glibc源码中。这里我们已经有resolver对应的汇编了，这就好办了，objdump glibc，找到汇编对应的源码位置即可，如下所示。</p>
+<p><img src="/../img/linker/ifunc/ifunc_memcmp_resolver_objdump.png" srcset="/img/loading.gif" lazyload alt="ifunc_memcmp_resolver_objdump"></p>
+<p>可以看到，memcmp的resolver位于<code>sysdeps/x86_64/multiarch/ifunc-memcmp.h:38</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-keyword">inline</span> <span class="hljs-type">void</span> *<br><span class="hljs-title function_">IFUNC_SELECTOR</span> <span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>  <span class="hljs-type">const</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">cpu_features</span> *<span class="hljs-title">cpu_features</span> =</span> __get_cpu_features ();<br><br>  <span class="hljs-keyword">if</span> (X86_ISA_CPU_FEATURE_USABLE_P (cpu_features, AVX2)<br>      &amp;&amp; X86_ISA_CPU_FEATURE_USABLE_P (cpu_features, MOVBE)<br>      &amp;&amp; X86_ISA_CPU_FEATURE_USABLE_P (cpu_features, BMI2)<br>      &amp;&amp; X86_ISA_CPU_FEATURES_ARCH_P (cpu_features,<br>				      AVX_Fast_Unaligned_Load, ))<br>    &#123;<br>      <span class="hljs-keyword">if</span> (X86_ISA_CPU_FEATURE_USABLE_P (cpu_features, AVX512VL)<br>	  &amp;&amp; X86_ISA_CPU_FEATURE_USABLE_P (cpu_features, AVX512BW))<br>	<span class="hljs-keyword">return</span> OPTIMIZE (evex_movbe);<br><br>      <span class="hljs-keyword">if</span> (CPU_FEATURE_USABLE_P (cpu_features, RTM))<br>	<span class="hljs-keyword">return</span> OPTIMIZE (avx2_movbe_rtm);<br><br>      <span class="hljs-keyword">if</span> (X86_ISA_CPU_FEATURES_ARCH_P (cpu_features,<br>				       Prefer_No_VZEROUPPER, !))<br>	<span class="hljs-keyword">return</span> OPTIMIZE (avx2_movbe);<br>    &#125;<br><br>  <span class="hljs-keyword">return</span> OPTIMIZE (sse2);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>通过上述代码可以得知，memcmp的resolver是根据指令集测试的结果来选择具体的函数实现的。</p>
+<h1 id="how"><a href="#how" class="headerlink" title="how"></a>how</h1><p><code>readelf -s elf</code> 可以查看elf的所有符号。</p>
+<p><img src="/../img/linker/ifunc/libc_ifunc.png" srcset="/img/loading.gif" lazyload alt="libc_ifunc"></p>
+<p>可以看到，strncpy和memcpy等字符串处理函数和内存处理函数的符号类型都是<code>STT_GNU_IFUNC</code>。</p>
+<p>以下是一个简单的例子</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* Dispatching via IFUNC ELF Extension */</span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stddef.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_c</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_sse42</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">foo_avx2</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> &#123; <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%s\n&quot;</span>, __FUNCTION__); &#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_sse42</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">cpu_has_avx2</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	<span class="hljs-keyword">return</span> __builtin_cpu_supports(<span class="hljs-string">&quot;avx&quot;</span>);<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined(__AVX2__)</span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">1</span>;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> *data, <span class="hljs-type">size_t</span> len)</span> __<span class="hljs-title function_">attribute__</span><span class="hljs-params">((ifunc (<span class="hljs-string">&quot;resolve_foo&quot;</span>)))</span>;<br><br><span class="hljs-type">static</span> <span class="hljs-type">void</span> *<span class="hljs-title function_">resolve_foo</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>        <span class="hljs-keyword">if</span> (cpu_has_avx2())<br>                <span class="hljs-keyword">return</span> foo_avx2;<br>        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (cpu_has_sse42())<br>                <span class="hljs-keyword">return</span> foo_sse42;<br>        <span class="hljs-keyword">else</span><br>                <span class="hljs-keyword">return</span> foo_c;<br>&#125;<br><br><span class="hljs-type">int</span> <span class="hljs-title function_">main</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span><br>&#123;<br>	foo(<span class="hljs-literal">NULL</span>, <span class="hljs-number">0</span>);<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+
+
+
+<h1 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h1><ul>
+<li>为什么gdb无法显示memcmp的resolver对应的源码？</li>
+<li>为什么明明有plt section，_dl_start函数仍然在memcmp第一次执行前就把.got.plt装载好，即提前执行了resolver？</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linker-loader/" class="category-chain-item">linker/loader</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>ifunc</div>
+      <div>http://example.com/ifunc/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Yw</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年5月5日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/vtbl/" title="vtbl">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">vtbl</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/%E9%93%BE%E6%8E%A5%E9%98%B6%E6%AE%B5gnu%E5%BA%93/" title="链接阶段gnu库">
+                        <span class="hidden-mobile">链接阶段gnu库</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"model":{"jsonPath":"/live2dw/assets/haruto.model.json"},"display":{"position":"right","width":150,"height":300},"mobile":{"show":true},"log":false,"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

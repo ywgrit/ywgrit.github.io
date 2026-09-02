@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Dependency Barrier 的逐周期生命周期</title>
+  <desc id="desc">W0 发射带 write barrier B2 的加载后，B2 变为 busy。两个不等待 B2 的独立指令继续发射，真正携带 wait B2 的消费者到达队首后才阻塞。加载完成释放 B2，消费者随后恢复发射。</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #eef4ff; }
+      .bg { fill: #0b1020; }
+      .panel { fill: #151e34; stroke: #42557e; stroke-width: 2; }
+      .grid { stroke: #2e3d5d; stroke-width: 1.5; }
+      .dash { stroke: #516383; stroke-width: 1.5; stroke-dasharray: 7 7; }
+      .h1 { font-size: 34px; font-weight: 750; }
+      .h2 { font-size: 23px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 15px; fill: #afbdd8; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 16px; }
+      .issue { fill: #113d50; stroke: #4ed3f1; stroke-width: 2; }
+      .independent { fill: #123d35; stroke: #55d6a5; stroke-width: 2; }
+      .blocked { fill: #512735; stroke: #ff7b8f; stroke-width: 2; }
+      .other { fill: #282a54; stroke: #9c8cff; stroke-width: 2; }
+      .busy { fill: #d45f78; }
+      .free { fill: #3ebf91; }
+      .memory { fill: #2e6fb0; }
+      .cyan { fill: #73ddf5; }
+      .green { fill: #74e3b6; }
+      .coral { fill: #ff9aaa; }
+      .purple { fill: #b8adff; }
+      .arrow { stroke: #8395bb; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8395bb"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text class="h1" x="720" y="56" text-anchor="middle">B2 busy，不等于整个 Warp 立刻停住</text>
+  <text class="small" x="720" y="88" text-anchor="middle">真正的停顿发生在携带 wait B2 的 consumer 到达队首以后</text>
+
+  <rect class="panel" x="44" y="118" width="1352" height="638" rx="20"/>
+  <text class="h2" x="150" y="170" text-anchor="middle">时间</text>
+  <text class="mono" x="322" y="170" text-anchor="middle">cycle 0</text>
+  <text class="mono" x="492" y="170" text-anchor="middle">cycle 1</text>
+  <text class="mono" x="662" y="170" text-anchor="middle">cycle 2</text>
+  <text class="mono" x="832" y="170" text-anchor="middle">cycle 3</text>
+  <text class="mono" x="1002" y="170" text-anchor="middle">...</text>
+  <text class="mono" x="1172" y="170" text-anchor="middle">cycle N</text>
+  <text class="mono" x="1320" y="170" text-anchor="middle">N+1</text>
+  <line class="grid" x1="235" y1="190" x2="1370" y2="190"/>
+  <line class="dash" x1="407" y1="145" x2="407" y2="720"/>
+  <line class="dash" x1="577" y1="145" x2="577" y2="720"/>
+  <line class="dash" x1="747" y1="145" x2="747" y2="720"/>
+  <line class="dash" x1="917" y1="145" x2="917" y2="720"/>
+  <line class="dash" x1="1087" y1="145" x2="1087" y2="720"/>
+  <line class="dash" x1="1257" y1="145" x2="1257" y2="720"/>
+
+  <text class="h2" x="142" y="254" text-anchor="middle">W0 队首</text>
+  <rect class="issue" x="250" y="214" width="145" height="76" rx="13"/>
+  <text class="mono" x="322" y="244" text-anchor="middle">LDG R1,[A]</text>
+  <text class="small cyan" x="322" y="272" text-anchor="middle">write B2</text>
+  <rect class="independent" x="420" y="214" width="145" height="76" rx="13"/>
+  <text class="mono" x="492" y="244" text-anchor="middle">IADD</text>
+  <text class="small green" x="492" y="272" text-anchor="middle">independent</text>
+  <rect class="independent" x="590" y="214" width="145" height="76" rx="13"/>
+  <text class="mono" x="662" y="244" text-anchor="middle">IMAD</text>
+  <text class="small green" x="662" y="272" text-anchor="middle">independent</text>
+  <rect class="blocked" x="760" y="214" width="315" height="76" rx="13"/>
+  <text class="mono" x="918" y="244" text-anchor="middle">FADD R4,R1,R5</text>
+  <text class="small coral" x="918" y="272" text-anchor="middle">wait B2 · 暂时不能 issue</text>
+  <rect class="independent" x="1270" y="214" width="100" height="76" rx="13"/>
+  <text class="mono" x="1320" y="244" text-anchor="middle">FADD</text>
+  <text class="small green" x="1320" y="272" text-anchor="middle">issue</text>
+
+  <text class="h2" x="142" y="374" text-anchor="middle">B2 状态</text>
+  <rect x="250" y="338" width="837" height="54" rx="27" class="busy"/>
+  <text class="body" x="668" y="372" text-anchor="middle">BUSY：producer 已发射，但 completion 还没回来</text>
+  <rect x="1087" y="338" width="283" height="54" rx="27" class="free"/>
+  <text class="body" x="1228" y="372" text-anchor="middle">FREE</text>
+  <line x1="1087" y1="320" x2="1087" y2="410" stroke="#ffcf70" stroke-width="4"/>
+  <text class="small" x="1087" y="430" text-anchor="middle">completion 释放 B2</text>
+
+  <text class="h2" x="142" y="500" text-anchor="middle">Memory</text>
+  <rect x="250" y="462" width="837" height="58" rx="13" class="memory"/>
+  <text class="body" x="668" y="498" text-anchor="middle">Load request 正在 cache / memory system 中推进</text>
+  <path class="arrow" d="M1087 491 L1248 491"/>
+  <rect class="independent" x="1248" y="462" width="122" height="58" rx="13"/>
+  <text class="body green" x="1309" y="498" text-anchor="middle">R1 ready</text>
+
+  <text class="h2" x="142" y="626" text-anchor="middle">Scheduler</text>
+  <rect class="issue" x="250" y="584" width="145" height="70" rx="13"/><text class="body cyan" x="322" y="626" text-anchor="middle">选择 W0</text>
+  <rect class="independent" x="420" y="584" width="145" height="70" rx="13"/><text class="body green" x="492" y="626" text-anchor="middle">选择 W0</text>
+  <rect class="independent" x="590" y="584" width="145" height="70" rx="13"/><text class="body green" x="662" y="626" text-anchor="middle">选择 W0</text>
+  <rect class="other" x="760" y="584" width="145" height="70" rx="13"/><text class="body purple" x="832" y="626" text-anchor="middle">改选 W1</text>
+  <rect class="other" x="930" y="584" width="145" height="70" rx="13"/><text class="body purple" x="1002" y="626" text-anchor="middle">W2 / others</text>
+  <rect class="independent" x="1099" y="584" width="271" height="70" rx="13"/><text class="body green" x="1235" y="616" text-anchor="middle">B2 已释放</text><text class="small green" x="1235" y="642" text-anchor="middle">W0 重新 eligible</text>
+
+  <rect x="122" y="687" width="1196" height="42" rx="12" fill="#10182a"/>
+  <text class="body" x="720" y="715" text-anchor="middle"><tspan class="green">IADD、IMAD 不等待 B2，继续前进</tspan><tspan>；</tspan><tspan class="coral">consumer 撞上 busy B2，W0 才退出 eligible 集合</tspan></text>
+
+  <rect class="panel" x="172" y="790" width="1096" height="72" rx="18"/>
+  <text class="h2" x="720" y="835" text-anchor="middle">编译工具链编码“等谁”；运行时 completion 决定“什么时候不用再等”</text>
+</svg>

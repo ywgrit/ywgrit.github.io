@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href="./static/css/base.css" rel="stylesheet">
+    <link href="./static/css/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.font.im/css?family=Source+Serif+Pro%7CLato%7CInconsolata" rel="stylesheet"
+        type="text/css">
+    <title> tech_talk_show </title>
+    <!-- browser favicon -->
+    <link rel="shortcut icon" href="./static/img/favicon.png">
+    <style>
+        .font-sans {
+            font-family: 'Lato', 'SimHei', 'STHeiti', 'SimHei', 'Serif';
+        }
+
+        .font-serif {
+            font-family: 'Source Serif Pro', 'Songti SC', 'SimSun', 'Serif', serif;
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="https://jyywiki.cn/static/katex/katex.min.css">
+    <script defer src="https://jyywiki.cn/static/katex/katex.min.js"></script> -->
+    <link rel="stylesheet" href="./static/katex/katex.min.css">
+    <script defer src="./static/katex/katex.min.js"></script>
+    <!-- <script defer src="https://jyywiki.cn/static/katex/auto-render.min.js"
+        integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
+        crossorigin="anonymous"></script> -->
+    <script defer src="./static/katex/auto-render.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                // customised options
+                // &#8226; auto-render specific keys, e.g.:
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                // &#8226; rendering keys, e.g.:
+                throwOnError: false
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="./static/reveal/reveal.css">
+    <link rel="stylesheet" href="./static/reveal/theme/simple.css" id="theme">
+    <link rel="stylesheet" href="./static/jyy/jyy.css">
+
+</head>
+
+<body class="d-flex flex-column h-100">
+
+    <div class="reveal">
+        <div class="slides">
+            <section><section><div class="center middle"><div style="width:100%"><div><h1 id="linux" class="text-2xl mt-2 font-sans">彻底使用Linux</h1>
+<hr/>
+
+<p class="font-serif my-1"><a href="https://github.com/ywgrit">ywgrit</a></p></div></div></div></section><section><div><h2 id="overview" class="text-xl mt-2 pb-2 font-sans">Overview</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8"><strong>Q1</strong> (Why): 为什么使用Linux？</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8"><strong>Q2</strong> (What): "彻底"有多彻底？</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8"><strong>Q3</strong> (How): 如何将"彻底"进行到底？</li>
+</ul></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="q1-linux" class="text-2xl mt-2 font-sans">Q1: 为什么使用Linux?</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">工具的作用</h2>
+<blockquote>
+<p class="font-serif my-1">You are  your tools -- Daniel Lemire</p>
+</blockquote><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">拯救程序员无数次的自动化工具</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">Type safety check</li>
+<li class="ml-8">-Wall -Werror</li>
+<li class="ml-8">Differential testing</li>
+<li class="ml-8">Model checker</li>
+<li class="ml-8"><a href="https://lamport.azurewebsites.net/tla/tla.html">TLA+</a> by Leslie Lamport;</li>
+<li class="ml-8"><a href="https://ti.arc.nasa.gov/tech/rse/vandv/jpf/">Java PathFinder (JFP)</a> 和 <a href="http://spinroot.com/">SPIN</a></li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">工具带来的效率提升</h2>
+<p class="font-serif my-1">熟悉项目</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">打印项目构建过程</li>
+</ul>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">make -n -j$(nproc) &gt; make_log
+</code></pre></div><div class="fragment" data-fragment-index="2"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">make it human friendly</li>
+</ul>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">%!grep -ve '^\(\#\|echo\|mkdir\|make\)' # 过滤掉无用信息
+%s/ /\r /g                              # 将空格替换为换行符
+%!grep -vE '^ -[^co].*$'                # 删除模式为所有"^ *$"的行删除掉，保留"^ [co]$"
+%s/\v( \n){3,}//g                       # 删除模式为至少出现三次“空格后跟换行符”的行
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">敏捷开发</h2>
+<p class="font-serif my-1"><strong>香山处理器项目的基础设施</strong></p>
+<p class="font-serif my-1">2021年RISC-V中国峰会, 工具类报告占香山团队报告总量55%(12/22)</p>
+<p class="font-serif my-1"><img alt="12-xiangshan-tools" src="./static/img/fafd897b21654b6f85fc02e37622cb72.png"/></p></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">敏捷开发</h2>
+<p class="font-serif my-1">效率的实际体现
+<img alt="12-xiangshan-tools" src="./static/img/51349d66e26b4a8988f05dd9afb90541.png"/></p></div></section><section><div><h2 id="linux" class="text-xl mt-2 pb-2 font-sans">Linux高度可定制化</h2>
+<p class="font-serif my-1"><img class="float-right" src="./static/img/faee1c3b18804e26ba44ede488402542.png" width="250px"/></p>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">配置精简：Lfs、Gentoo、Archlinux</li>
+<li class="ml-8">高效垃圾回收：你的服务器已经数年未关机</li>
+</ul><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">最小化的linux</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-bash">$ tree minimal-linux
+.
+├── initramfs
+│   ├── bin
+│   │   └── busybox
+│   └── init
+├── Makefile
+└── vmlinuz
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">强（无）大（尽）生（折）态（腾）</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">Archlinux<ul class="list-disc font-serif">
+<li class="ml-8">庞大的软件仓库，社区的geek们帮我们做了99%的事情</li>
+<li class="ml-8">强大的包管理<ul class="list-disc font-serif">
+<li class="ml-8">无需添加奇怪的repo</li>
+<li class="ml-8">解决地狱依赖</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul><div class="fragment" data-fragment-index="1"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">Some packages could not be installed. This may mean that you have
+requested an impossible situation or if you are using the unstable
+distribution that some required packages have not yet been created
+or been moved out of Incoming.
+The following information may help to resolve the situation:
+
+The following packages have unmet dependencies:
+ package1 : Depends: package2 (&gt;= 1.8) but 1.7.5-1ubuntu1 is to be installed
+E: Unable to correct problems, you have held broken packages.
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">强（无）大（尽）生（折）态（腾）</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">NixOs<ul class="list-disc font-serif">
+<li class="ml-8">可重新构建：软件包相互隔离，机器A work -&gt; 机器B work
+<hr/></li>
+<li class="ml-8">可靠性：软件的安装和更新不会相互影响，版本滚动极其简单
+<hr/></li>
+<li class="ml-8"><red>声明式系统管理：所有软件环境都可用nix语言声明<red/></red></li>
+</ul>
+</li>
+</ul><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">Core advantage</p>
+<ul class="list-disc font-serif">
+<li class="ml-8"><red>只需NixOS的配置文件， 就能恢复出完全相同的软件环境<red/></red></li>
+</ul>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">NixOS不直接管理数据，但其可以很好的管理数据同步软件</li>
+</ul></div></div></section><section><div><h2 id="windows" class="text-xl mt-2 pb-2 font-sans">平滑迁移windows应用</h2>
+<p class="font-serif my-1"><img src="./static/img/5bf88581da354fa7ab2fb75cd65cb40c.webp" width="400px" style="float: right;"/></p>
+<p class="font-serif my-1">办公</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">[企业]微信</li>
+<li class="ml-8">腾讯会议</li>
+<li class="ml-8">飞书</li>
+</ul><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+
+<p class="font-serif my-1">other</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">obs</li>
+<li class="ml-8">QQ</li>
+<li class="ml-8">LOL<ul class="list-disc font-serif">
+<li class="ml-8"><a href="https://martins3.github.io/">淦，打一把英雄联盟不可能这么难</a></li>
+</ul>
+</li>
+</ul></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<blockquote>
+<p class="font-serif my-1">Shell 是一门 “把用户指令翻译成系统调用” 的编程语言</p>
+</blockquote>
+<p class="font-serif my-1"><img class="float-right" src="./static/img/8637e002fd2c4fc3b9352ae4e4a878d3.jpeg" width="300px"/></p>
+<ul class="list-disc font-serif">
+<li class="ml-8">“Command-line interface” (CLI) 的巅峰</li>
+<li class="ml-8">(今天的 GUI 并没有比 CLI 多做太多事)</li>
+</ul><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">基于文本替换的快速工作流搭建</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">重定向: <code>cmd &gt; file &lt; file 2&gt; /dev/null</code></li>
+<li class="ml-8">顺序结构: <code>cmd1; cmd2</code>, <code>cmd1 &amp;&amp; cmd2</code>, <code>cmd1 || cmd2</code></li>
+<li class="ml-8">管道: <code>cmd1 | cmd2</code></li>
+<li class="ml-8">预处理: <code>$()</code>, <code>&lt;()</code></li>
+<li class="ml-8">变量/环境变量、控制流……</li>
+</ul></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<p class="font-serif my-1">Job control</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">最小化(在后台运行) - C-Z + bg<ul class="list-disc font-serif">
+<li class="ml-8">或运行命令时通过末尾添加&amp;指定后台运行</li>
+</ul>
+</li>
+<li class="ml-8">任务栏 - jobs</li>
+<li class="ml-8">最大化 - fg</li>
+<li class="ml-8">关闭 - kill<ul class="list-disc font-serif">
+<li class="ml-8">一般通过kill -9 进程号强行关闭</li>
+</ul>
+</li>
+<li class="ml-8">任务管理器 - ps aux, top, htop</li>
+</ul>
+<hr/>
+<hr/>
+<hr/><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">有什么好处? 这些在GUI下点点鼠标也能做</p></div><div class="fragment" data-fragment-index="2"><p class="font-serif my-1"><red>有些简单的事GUI反而做不好<red/></red></p></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<p class="font-serif my-1">1、 比较两个文件是否完全相同</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">
+<p class="font-serif my-1">CLI下的解决方案</p>
+<ul class="list-disc font-serif">
+<li class="ml-8">文本文件的比较: <code>vimdiff file1 file2</code></li>
+<li class="ml-8">非文本文件的比较: <code>diff file1 file2</code></li>
+<li class="ml-8">很大的文件: <code>md5sum file1 file2</code></li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">GUI下的解决方案<ul class="list-disc font-serif">
+<li class="ml-8">下载一个计算MD5的GUI工具</li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="3"><p class="font-serif my-1">一次也省不了多少时间 😕</p></div><div class="fragment" data-fragment-index="4"><p class="font-serif my-1"><red>真相 - 工作效率就是这样一点点降低的<red/></red></p></div></div></section><section><div><h2 id="llinux-philosophy" class="text-xl mt-2 pb-2 font-sans">Llinux philosophy</h2>
+<p class="font-serif my-1">2、查笔记</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">GUI<ul class="list-disc font-serif">
+<li class="ml-8">暴击文件管理器（or浏览器） 💀</li>
+</ul>
+</li>
+</ul>
+<hr/></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">CLI（演示）<ul class="list-disc font-serif">
+<li class="ml-8">one command line</li>
+</ul>
+</li>
+</ul>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">doc
+</code></pre></div><div class="fragment" data-fragment-index="3"><hr/>
+<p class="font-serif my-1">3、CPU主频监视器</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">watch -t -n 1 "cat /proc/cpuinfo | grep MHz | awk '{print \$1 NR \$3 \$4 \$2}'"
+</code></pre>
+
+<hr/></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<p class="font-serif my-1"><strong>有些稍微复杂的事GUI几乎做不了</strong></p><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">例子: 列出一个C语言项目中所有被包含过的头文件</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">如何用GUI实现?</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<hr/>
+<p class="font-serif my-1">CLI的解决方案:</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code>find . -name "*.[ch]" | xargs cat | grep "^#include" | sort | uniq
+</code></pre></div><div class="fragment" data-fragment-index="4"><hr/>
+<p class="font-serif my-1">体现出的Unix philosophy</p></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">每个小工具只做一件事, 但做到极致</li>
+</ul></div><div class="fragment" data-fragment-index="6"><ul class="list-disc font-serif">
+<li class="ml-8">小工具采用文本进行输入输出, 从而易于使用</li>
+</ul></div><div class="fragment" data-fragment-index="7"><ul class="list-disc font-serif">
+<li class="ml-8">通过小工具之间的组合来解决复杂问题</li>
+</ul></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<p class="font-serif my-1">自动化脚本</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">人的按键频率(~4HZ) vs. CPU的工作频率(~4GHZ)</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">手指-计算机的按键墙 &lt;==&gt; 内存-CPU的内存墙</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<hr/>
+<p class="font-serif my-1"/><center><img class="bottom" src="./static/img/556254d133a24143b77e6ac3a021b0ba.png" width="600px"/><center/></center></div></div></section><section><div><h2 id="linux-philosophy" class="text-xl mt-2 pb-2 font-sans">Linux philosophy</h2>
+<p class="font-serif my-1"><strong>使用工具 = 编程</strong></p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">标准小工具之间的组合 -&gt; shell编程</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">vim -&gt; 命令编程(dd-&gt;删除1行, 10dd-&gt;删除10行)</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">grep/awk/sed -&gt; 正则表达式编程</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">Unix is user-friendly</p></div><div class="fragment" data-fragment-index="5"><hr/>
+<p class="font-serif my-1"><red>Unix is user-friendly -- it's just choosy about who its friends are.<red/></red></p></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="q2" class="text-2xl mt-2 font-sans">Q2: "彻底"有多彻底？</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">持续化工作流</h2>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code>++--------------------------------------------------------------+
+|+--------------------------------------------------+           |
+||+---------------------------------+               |           |
+|||+----------------+               |               |           |
+||||                |               |               |           |
+vvvv                |N  Y           |N   Y          |N   Y      |
+读代码 =&gt; 写代码 =&gt; 写完? --&gt; 编译 =&gt; 正确? --&gt; 运行 =&gt; 正确? --&gt; 下一个功能
+</code></pre><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升写代码的效率?</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升编译的效率?</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">如何提升调试的效率?</li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">写代码</h2>
+<p class="font-serif my-1">浏览网页时间 : 编码时间 = 9 : 1</p><div class="fragment" data-fragment-index="1"><hr/>
+<p class="font-serif my-1"><a href="https://chrome.google.com/webstore/detail/vimium/dbepggeogbaibhgnhhndojpepiihcmeb">vimum</a></p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">平滑切换vim</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">标签页快速跳转</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">进入任一链接只需敲三下</li>
+</ul>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/1d5c65a40c044259802f345afede7068.png" width="600px"/>
+        </td>
+    </tr>
+</table></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">写代码</h2><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">更现代的CLI工具</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">ripgrep<ul class="list-disc font-serif">
+<li class="ml-8">部分场景比grep快接近一个数量级</li>
+<li class="ml-8">自动忽略.gitignore和.ignore中指定的文件</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">tldr<ul class="list-disc font-serif">
+<li class="ml-8">快速查阅工具使用方法</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">ranger<ul class="list-disc font-serif">
+<li class="ml-8">彻底摆脱GUI文件管理器</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="5"><ul class="list-disc font-serif">
+<li class="ml-8">fzf（瑞士军刀）<ul class="list-disc font-serif">
+<li class="ml-8">极速</li>
+<li class="ml-8">完美体现Unix philosophy</li>
+</ul>
+</li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">编译</h2>
+<p class="font-serif my-1">Compilation &amp; Assembly</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">编译缓存：ccache</li>
+</ul></div><div class="fragment" data-fragment-index="2"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">bear -- make -j$(nproc)
+
+without ccache                                     2:14.76 total
+with ccache first time                             2:42.42 total
+make clean &amp;&amp; with ccache second time               40.062 total
+</code></pre></div><div class="fragment" data-fragment-index="3"><hr/>
+<p class="font-serif my-1">学习成本：30s(STFW: improving build speed on Linux) + 30s(RTFM:  configure ccache)</p></div><div class="fragment" data-fragment-index="4"><hr/>
+<hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">分布式编译：icecream</li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">编译</h2>
+<p class="font-serif my-1">Linking</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell"># Just modified several compilation unit
+bear -- make -j$(nproc)
+
+without cache                       10.271 total
+with ccache                          9.987 total
+</code></pre><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">可以更快吗？（STFW: make linker faster）</p></div><div class="fragment" data-fragment-index="2"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">with mold                            1.433 total
+</code></pre></div><div class="fragment" data-fragment-index="3"><hr/>
+<hr/>
+<p class="font-serif my-1"><red>10s -&gt; 1s的提升, 意义真的大吗？<red/></red></p></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">编译</h2>
+<p class="font-serif my-1">脑科学研究表明: 人脑的短期记忆容量是有限的(7±2个单元)</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">等1s, 基本上可以持续工作</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">等10s, 你就开始想别的了</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">等30s, 你大概率去摸手机了<ul class="list-disc font-serif">
+<li class="ml-8">摸一下5min就过去了</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1"><red><strong>工具的另一个作用:  保持注意力集中</strong><red/></red></p></div><div class="fragment" data-fragment-index="5"><p class="font-serif my-1">扩大可持续工作时间的比例</p></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">调试</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">prerequisite<ul class="list-disc font-serif">
+<li class="ml-8">STFW: 工具的演进过程中隐藏了很多有用信息，如gdb是GNU readline工具</li>
+<li class="ml-8">RTFM: gdb提供了完备的编程接口</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">configure<ul class="list-disc font-serif">
+<li class="ml-8">readline: 默认的配置文件$HOME/.inputrc</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="3"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell"># gdb 窗口切换快捷键
+$if gdb
+"\C-j":"focus next\r"
+"\C-k":"focus prev\r"
+$endif
+
+# 按下CTRL-O，在光标后面添加 "&gt; output.txt"
+Control-o: "&gt; output.txt"
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">调试</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">configure<ul class="list-disc font-serif">
+<li class="ml-8"><a href="https://github.com/lebr0nli/GEP">script</a><ul class="list-disc font-serif">
+<li class="ml-8">Ctrl+r for fzf history reverse search</li>
+<li class="ml-8">↑ key for partial string matching in history</li>
+<li class="ml-8">TAB for auto-completion with:<ul class="list-disc font-serif">
+<li class="ml-8">fzf (When fzf is installed)</li>
+<li class="ml-8">floating window (Similar to IPython's auto-completion)</li>
+</ul>
+</li>
+<li class="ml-8">fish-like autosuggestions (→ key to accept the suggestion)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">调试</h2>
+<p class="font-serif my-1"><strong>一个重要的踪迹工具: <code>strace</code></strong></p><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">打开黑盒的方法</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">看源码(source): 可以得知每一处静态细节, 但较繁琐</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">看踪迹(trace): 可以了解运行动态行为, 但不全面<ul class="list-disc font-serif">
+<li class="ml-8">不过却容易理解!</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<p class="font-serif my-1">例1："ls"命令是如何被找到的</p></div><div class="fragment" data-fragment-index="5"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">strace -f bash -c "ls" 2&gt;&amp;1 | nvim - # -f 跟踪子进程
+</code></pre></div><div class="fragment" data-fragment-index="6"><p class="font-serif my-1">例2：用户如何与man交互</p></div><div class="fragment" data-fragment-index="7"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell">strace -o strace.log -f man ls       # -o 将跟踪结果重定向到指定文件中
+tail -f strace.log                   # 持续输出追加的数据
+</code></pre></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="q3" class="text-2xl mt-2 font-sans">Q3: 如何将"彻底"进行到底？</h1></div></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">自制工具</h2>
+<p class="font-serif my-1">fineperf：解决perf难以profile指定代码段的问题</p><div class="fragment" data-fragment-index="1"><hr/>
+
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-cpp">#include "perf.hpp"
+
+// ...
+    perf_[stat|record]("/path/to/output",[&amp;]() {
+        // code needed be profiled
+    });
+// ...
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<p class="font-serif my-1">从编译、操作系统、处理器的角度去理解程序的构建和执行过程</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">现代编译器和处理器都是让并行执行窗口尽可能更大，阻塞尽可能小，编译器的静态分析和动态分析都是如此</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">通过和编译器交互来扣cycle：<ul class="list-disc font-serif">
+<li class="ml-8">静态分析：指令调度、寄存器分配、窥孔优化 ❎</li>
+<li class="ml-8">动态分析：如需要cost model的自动向量化/并行化 ✅</li>
+</ul>
+</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/5e6d5918f2bd47df8cf7f87197b26435.png" width="600px"/>
+        </td>
+    </tr>
+</table></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<p class="font-serif my-1">从源码构建Nixos/Archlinux软件包（例如使用wine）-&gt; 了解elf、程序的加载 -&gt; 更清晰理解elf相关问题</p><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">1) The execution performance of elf with debug info is not worse than elf stripped debug info</li>
+</ul></div><div class="fragment" data-fragment-index="2"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-shell"># diff sections_with_debug secitons_without_debug
+
+&lt;  27 .debug_aranges 00000030  0000000000000000  0000000000000000  0000303b  2**0
+&lt;                   CONTENTS, READONLY, DEBUGGING, OCTETS
+&lt;  28 .debug_info   0000031b  0000000000000000  0000000000000000  0000306b  2**0
+&lt;                   CONTENTS, READONLY, DEBUGGING, OCTETS
+&lt;  29 .debug_abbrev 000000e2  0000000000000000  0000000000000000  00003386  2**0
+&lt;                   CONTENTS, READONLY, DEBUGGING, OCTETS
+&lt;  30 .debug_line   00000113  0000000000000000  0000000000000000  00003468  2**0
+&lt;                   CONTENTS, READONLY, DEBUGGING, OCTETS
+&lt;  31 .debug_str    00000292  0000000000000000  0000000000000000  0000357b  2**0
+&lt;                   CONTENTS, READONLY, DEBUGGING, OCTETS
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">2) "symbol not found" of pdb log</li>
+</ul>
+<p class="font-serif my-1">Initial log</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code>2   0x55dce756509c postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe756509c
+3   0x7f4ddfeb2420 libpthread.so.0 &lt;symbol not found&gt; + 0xdfeb2420
+4   0x55dce7217556 postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe7217556
+5   0x55dce7218106 postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe7218106
+6   0x55dce721b251 postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe721b251
+                                 . . .
+15   0x55dce71f4ef4 postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe71f4ef4
+16   0x55dce71f9b7b postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe71f9b7b
+17   0x55dce71f6b12 postgres: 6000, logger process   standard_ExecutorRun + 0x3d5
+18   0x55dce71f673a postgres: 6000, logger process   ExecutorRun + 0x5d
+19   0x55dce756ae30 postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe756ae30
+20   0x55dce756a9fb postgres: 6000, logger process   PortalRun + 0x2c7
+21   0x55dce75611bc postgres: 6000, logger process   &lt;symbol not found&gt; + 0xe75611bc
+22   0x55dce7567e8c postgres: 6000, logger process   PostgresMain + 0x1433
+</code></pre></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<ul class="list-disc font-serif">
+<li class="ml-8">2) "symbol not found" of pdb log</li>
+</ul>
+<p class="font-serif my-1">Enhanced log</p>
+<pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code>/home/gpadmin/piemaster/piedb_cluster/bin/postgres(tuplestore_gettupleslot+0x43) [0x55ebe93a5813]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecMaterial+0x320) [0x55ebe8e2a8fe]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecProcNodeGPDB+0x129) [0x55ebe8df38b6]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecProcNode+0x36) [0x55ebe8e35be8]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecNestLoop_guts+0x508) [0x55ebe8e362b4]
+                             . . .
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecProcNode+0x36) [0x55ebe8de4f14]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecutePlan+0x108) [0x55ebe8de9b9b]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(standard_ExecutorRun+0x3d5) [0x55ebe8de6b32]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(ExecutorRun+0x5d) [0x55ebe8de675a]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(PortalRunSelect+0x120) [0x55ebe915ae50]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(PortalRun+0x2c7) [0x55ebe915aa1b]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(exec_mpp_query+0xadf) [0x55ebe91511dc]
+/home/gpadmin/piemaster/piedb_cluster/bin/postgres(PostgresMain+0x1433) [0x55ebe9157eac]
+</code></pre></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<p class="font-serif my-1">过程</p><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">-&gt; 找出打印调用栈的函数：backtrace_symbols</p></div><div class="fragment" data-fragment-index="2"><p class="font-serif my-1">-&gt; glibc没有调试信息，不能跟踪 😒</p></div><div class="fragment" data-fragment-index="3"><p class="font-serif my-1">-&gt; 编译glibc，跟踪backtrace_symbols</p></div><div class="fragment" data-fragment-index="4"><p class="font-serif my-1">-&gt; 只在.dynsym section中寻找Bind类型为GLOBAL和WEAK的符号</p></div><div class="fragment" data-fragment-index="5"><p class="font-serif my-1">-&gt; 加载.symtab section，找到pdb中大量Bind类型为LOCAL的static函数的符号</p></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<p class="font-serif my-1">搭建Lfs、Gentoo可能需要裁剪内核 -&gt; 了解到运行内核的方式 -&gt; 修改内核的信号处理机制方便调试程序</p><div class="fragment" data-fragment-index="1"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-c">/* include/linux/signal.h */
+
+// 1: coredump
+#define SIG_KERNEL_ONLY_MASK (\
+    rt_sigmask(SIGKILL)   |  rt_sigmask(SIGSTOP))
+
+#define SIG_KERNEL_COREDUMP_MASK (\
+        rt_sigmask(SIGQUIT)   |  rt_sigmask(SIGILL)    | \
+        ...)
+
+// 2: handler
+    /* Invert the set of allowed signals to get those we want to block. */
+    sigdelsetmask(&amp;mask, sigmask(SIGKILL) | sigmask(SIGSTOP));
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/36ed724a39124533ae5aece87603360a.jpg" width="500px"/>
+        </td>
+    </tr>
+</table><div class="fragment" data-fragment-index="1"><hr/>
+<hr/>
+<hr/>
+<hr/>
+<p class="font-serif my-1">学习成本</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">编译：内置脚本script/gen_compile_commands.py生成符号索引</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">运行：elf &lt;-- kernel &lt;-- qemu &lt;-- gdb</li>
+</ul></div><div class="fragment" data-fragment-index="4"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">debug：gdb[ + printk]</li>
+</ul></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<p class="font-serif my-1">减轻对“黑魔法”的困惑</p><div class="fragment" data-fragment-index="1"><pre class="codehilite bg-gray-100 overflow-x-auto rounded p-2 mb-2 mt-2"><code class="language-c">#include &lt;iostream&gt;
+
+int main()
+{
+    while (1) ;
+}
+
+void mayreachable()
+{
+    std::cout &lt;&lt; "Hello world!" &lt;&lt; std::endl;
+}
+</code></pre></div></div></section><section><div><h2 id="_1" class="text-xl mt-2 pb-2 font-sans">学习基础设施</h2>
+<table align="center">
+    <tr>
+        <td>
+            <img src="./static/img/6025e794b01e41358de3095361f9eeaa.png" width="470px"/>
+        </td>
+    </tr>
+</table><div class="fragment" data-fragment-index="1"><p class="font-serif my-1">尝试解开“黑魔法”</p></div><div class="fragment" data-fragment-index="2"><ul class="list-disc font-serif">
+<li class="ml-8">"while (1);" is an "undefined behavior" in C++ standard</li>
+</ul></div><div class="fragment" data-fragment-index="3"><ul class="list-disc font-serif">
+<li class="ml-8">STFW: how llvm deal with undefined behavior</li>
+</ul></div><div class="fragment" data-fragment-index="4"><ul class="list-disc font-serif">
+<li class="ml-8">clang（version 14及以上）默认会将UB替换为一个UB marker，不会生成任何指令，包括ret指令</li>
+</ul></div><div class="fragment" data-fragment-index="5"><p class="font-serif my-1">验证：添加编译选项"-trap-unreachable" 😀
+</p><center><img class="bottom" src="./static/img/f3ade2ec95c043429cc02c06ca3449f3.png" width="500px"/><center/></center></div></div></section><section><div><h2 id="life-is-short-use-linux" class="text-xl mt-2 pb-2 font-sans">Life is short, use Linux</h2><div class="fragment" data-fragment-index="1"><ul class="list-disc font-serif">
+<li class="ml-8">工具是第一生产力（使用工具 = 编程）</li>
+</ul></div><div class="fragment" data-fragment-index="2"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8">Prerequisite of being a power user: STFW/RTFM</li>
+</ul></div><div class="fragment" data-fragment-index="3"><hr/>
+<ul class="list-disc font-serif">
+<li class="ml-8"><img class="left" src="./static/img/486bf7b7747b4d20a6535a6e36282d11.png" width="300px"/></li>
+</ul>
+<div style="text-align: right;">
+<div style="text-align: left; display: inline-block;">T: Number of tools at hand<div>
+<div style="text-align: left; display: inline-block;">C: The cost of learning a good tool<div>
+<div style="text-align: left; display: inline-block;">B: The benefits of a good tool<div>
+</div>
+<hr/></div></div></div></div></div></div></div></div></section></section><section><section><div class="center middle"><div style="width:100%"><div><h1 id="qa" class="text-2xl mt-2 font-sans"><red>Q&amp;A<red/></red></h1></div></div></div></section></section>
+        </div>
+    </div>
+
+    <script src="./static/reveal/reveal.js"></script>
+
+    <script>
+        Reveal.initialize({
+
+            width: 1024, height: 768,
+
+            slideNumber: 'c/t',
+            controlsTutorial: false,
+            progress: false,
+            hash: true,
+            center: false,
+            autoAnimateUnmatched: true,
+            autoAnimateEasing: 'ease-out',
+            autoAnimateDuration: 0.3,
+            transitionSpeed: 'fast'
+        });
+    </script>
+</body>
+
+</html>
