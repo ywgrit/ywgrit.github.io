@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">GPU 指令 Control Code 字段的职责分工</title>
+  <desc id="desc">把 Reuse、Wait Barrier Mask、Read Barrier、Write Barrier、Yield 和 Stall Cycles 按操作数读取、依赖正确性、调度提示和固定延迟时序分类，并用 RAW 与 WAR 两组 producer consumer 指令说明 barrier 的使用。</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #eef4ff; }
+      .bg { fill: #0b1020; }
+      .panel { fill: #151e34; stroke: #42557e; stroke-width: 2; }
+      .inner { fill: #10182a; stroke: #60749e; stroke-width: 1.8; }
+      .reuse { fill: #2c2851; stroke: #a99aff; stroke-width: 2; }
+      .dep { fill: #4b2938; stroke: #ff879b; stroke-width: 2; }
+      .yield { fill: #12394d; stroke: #52c8ed; stroke-width: 2; }
+      .stall { fill: #4b3d1f; stroke: #f1c75b; stroke-width: 2; }
+      .raw { fill: #143c36; stroke: #57d7ab; stroke-width: 2; }
+      .war { fill: #352c54; stroke: #a99aff; stroke-width: 2; }
+      .h1 { font-size: 34px; font-weight: 750; }
+      .h2 { font-size: 24px; font-weight: 700; }
+      .h3 { font-size: 20px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .small { font-size: 15px; fill: #afbdd8; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 16px; }
+      .purple { fill: #c0b7ff; }
+      .coral { fill: #ffabb8; }
+      .cyan { fill: #7adcf5; }
+      .gold { fill: #f6d77e; }
+      .green { fill: #7be5bb; }
+      .line { stroke: #8195be; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .greenLine { stroke: #57d7ab; stroke-width: 3; fill: none; marker-end: url(#greenArrow); }
+      .purpleLine { stroke: #a99aff; stroke-width: 3; fill: none; marker-end: url(#purpleArrow); }
+      .bracket { stroke: #8092b6; stroke-width: 2; fill: none; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8195be"/></marker>
+    <marker id="greenArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#57d7ab"/></marker>
+    <marker id="purpleArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#a99aff"/></marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text class="h1" x="720" y="54" text-anchor="middle">Control Code：一条指令旁边携带的调度契约</text>
+  <text class="small" x="720" y="84" text-anchor="middle">字段集合来自公开逆向研究；这里画语义分工，不声称所有 GPU 采用同一 bit layout</text>
+
+  <rect class="panel" x="46" y="116" width="1348" height="296" rx="20"/>
+  <text class="h2" x="720" y="157" text-anchor="middle">一份 Control Bundle，四类不同职责</text>
+
+  <rect class="reuse" x="78" y="190" width="205" height="98" rx="14"/>
+  <text class="h3 purple" x="181" y="227" text-anchor="middle">Reuse Flags</text>
+  <text class="small" x="181" y="255" text-anchor="middle">源操作数留在</text>
+  <text class="small" x="181" y="278" text-anchor="middle">operand reuse buffer</text>
+
+  <rect class="dep" x="301" y="190" width="250" height="98" rx="14"/>
+  <text class="h3 coral" x="426" y="227" text-anchor="middle">Wait Barrier Mask</text>
+  <text class="small" x="426" y="255" text-anchor="middle">consumer 等哪些</text>
+  <text class="small" x="426" y="278" text-anchor="middle">producer 完成</text>
+
+  <rect class="dep" x="569" y="190" width="178" height="98" rx="14"/>
+  <text class="h3 coral" x="658" y="227" text-anchor="middle">Read Barrier</text>
+  <text class="small" x="658" y="255" text-anchor="middle">保护尚未完成</text>
+  <text class="small" x="658" y="278" text-anchor="middle">读取的 source</text>
+
+  <rect class="dep" x="765" y="190" width="178" height="98" rx="14"/>
+  <text class="h3 coral" x="854" y="227" text-anchor="middle">Write Barrier</text>
+  <text class="small" x="854" y="255" text-anchor="middle">跟踪尚未产生</text>
+  <text class="small" x="854" y="278" text-anchor="middle">结果的 destination</text>
+
+  <rect class="yield" x="961" y="190" width="178" height="98" rx="14"/>
+  <text class="h3 cyan" x="1050" y="227" text-anchor="middle">Yield</text>
+  <text class="small" x="1050" y="255" text-anchor="middle">多个 eligible Warp</text>
+  <text class="small" x="1050" y="278" text-anchor="middle">之间的调度提示</text>
+
+  <rect class="stall" x="1157" y="190" width="205" height="98" rx="14"/>
+  <text class="h3 gold" x="1260" y="227" text-anchor="middle">Stall Cycles</text>
+  <text class="small" x="1260" y="255" text-anchor="middle">固定延迟下的</text>
+  <text class="small" x="1260" y="278" text-anchor="middle">发射间隔</text>
+
+  <path class="bracket" d="M78 310 L78 328 L283 328 L283 310"/>
+  <text class="small purple" x="181" y="355" text-anchor="middle">操作数读取优化</text>
+  <path class="bracket" d="M301 310 L301 328 L943 328 L943 310"/>
+  <text class="small coral" x="622" y="355" text-anchor="middle">依赖正确性</text>
+  <path class="bracket" d="M961 310 L961 328 L1139 328 L1139 310"/>
+  <text class="small cyan" x="1050" y="355" text-anchor="middle">调度提示</text>
+  <path class="bracket" d="M1157 310 L1157 328 L1362 328 L1362 310"/>
+  <text class="small gold" x="1260" y="355" text-anchor="middle">静态时序</text>
+
+  <rect class="panel" x="46" y="448" width="654" height="334" rx="20"/>
+  <text class="h2 green" x="373" y="490" text-anchor="middle">RAW：等结果产生</text>
+  <rect class="raw" x="82" y="530" width="250" height="82" rx="14"/>
+  <text class="mono" x="207" y="562" text-anchor="middle">LDG R1, [A]</text>
+  <text class="small green" x="207" y="590" text-anchor="middle">Write Barrier = B2</text>
+  <path class="greenLine" d="M332 571 L414 571"/>
+  <rect class="inner" x="414" y="530" width="250" height="82" rx="14"/>
+  <text class="mono" x="539" y="562" text-anchor="middle">FADD R4,R1,R5</text>
+  <text class="small green" x="539" y="590" text-anchor="middle">Wait Mask includes B2</text>
+  <rect class="inner" x="82" y="642" width="582" height="96" rx="14"/>
+  <text class="body" x="373" y="676" text-anchor="middle">B2 busy：consumer 暂时不能 issue</text>
+  <text class="body green" x="373" y="710" text-anchor="middle">Load completion → B2 free → consumer 可以 issue</text>
+
+  <rect class="panel" x="740" y="448" width="654" height="334" rx="20"/>
+  <text class="h2 purple" x="1067" y="490" text-anchor="middle">WAR：等 source 读完</text>
+  <rect class="war" x="776" y="530" width="250" height="82" rx="14"/>
+  <text class="mono" x="901" y="562" text-anchor="middle">STG [A], R1</text>
+  <text class="small purple" x="901" y="590" text-anchor="middle">Read Barrier = B3</text>
+  <path class="purpleLine" d="M1026 571 L1108 571"/>
+  <rect class="inner" x="1108" y="530" width="250" height="82" rx="14"/>
+  <text class="mono" x="1233" y="562" text-anchor="middle">MOV R1, R5</text>
+  <text class="small purple" x="1233" y="590" text-anchor="middle">Wait Mask includes B3</text>
+  <rect class="inner" x="776" y="642" width="582" height="96" rx="14"/>
+  <text class="body" x="1067" y="676" text-anchor="middle">B3 busy：后面的 writer 不能覆盖 R1</text>
+  <text class="body purple" x="1067" y="710" text-anchor="middle">Store 不再读取 R1 → B3 free → writer 可以 issue</text>
+
+  <rect class="panel" x="172" y="814" width="1096" height="56" rx="16"/>
+  <text class="body" x="720" y="849" text-anchor="middle">Assembler 编码字段 → 运行时硬件维护 barrier / stall 状态 → Scheduler 消费 eligible 结果</text>
+</svg>

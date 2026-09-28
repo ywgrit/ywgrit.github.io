@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">GPU Scoreboard 的按 Warp 就绪检查与发射流程</title>
+  <desc id="desc">W0、W1、W2 各有独立寄存器与依赖上下文。W0 的加载占住 W0 的 R1 并阻塞其消费者，但不阻塞使用自身 R1 的 W1。W1 发射乘法时占住自己的 R2，乘法完成后只释放 W1 的 R2；W0 的 R1 必须等 W0 的加载返回。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#cbd5e1"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#34d399"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #f8fafc; }
+      .h1 { font-size: 30px; font-weight: 700; }
+      .h2 { font-size: 21px; font-weight: 700; }
+      .label { font-size: 17px; font-weight: 600; }
+      .small { font-size: 14px; fill: #cbd5e1; }
+      .tiny { font-size: 12px; fill: #cbd5e1; }
+      .cpuText { fill: #38bdf8; }
+      .gpuText { fill: #a78bfa; }
+      .readyText { fill: #34d399; }
+      .blockedText { fill: #fb7185; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 14px; }
+      .panel { fill: #182235; stroke: #334155; stroke-width: 2; }
+      .box { fill: #1e293b; stroke: #64748b; stroke-width: 1.5; }
+      .flow { fill: none; stroke: #cbd5e1; stroke-width: 2.3; marker-end: url(#arrow); }
+      .greenFlow { fill: none; stroke: #34d399; stroke-width: 2.8; marker-end: url(#arrowGreen); }
+      .divider { stroke: #334155; stroke-width: 1.5; }
+      .mobile { display: none; }
+      .mTitle { font-size: 42px; font-weight: 700; }
+      .mHead { font-size: 38px; font-weight: 700; }
+      .mBody { font-size: 34px; font-weight: 600; }
+      @media (max-width: 600px) {
+        .desktop { display: none; }
+        .mobile { display: inline; }
+      }
+    </style>
+  </defs>
+
+  <g class="desktop">
+  <rect width="1200" height="760" fill="#111827"/>
+  <text x="600" y="43" text-anchor="middle" class="h1">GPU Scoreboard：按 Warp 记账，挑能发射的现场</text>
+  <text x="600" y="72" text-anchor="middle" class="small">下面是解释性的 reserve / check / release 流程，不声称是某代 NVIDIA GPU 的已披露框图</text>
+
+  <!-- Next instructions -->
+  <rect x="28" y="105" width="246" height="385" rx="20" class="panel"/>
+  <text x="151" y="140" text-anchor="middle" class="h2">各 Warp 的下一条指令</text>
+  <text x="151" y="164" text-anchor="middle" class="small">独立 PC · 独立指令顺序</text>
+
+  <rect x="48" y="186" width="206" height="82" rx="13" fill="#321d2a" stroke="#fb7185" stroke-width="2"/>
+  <text x="66" y="213" class="h2 gpuText">W0</text>
+  <text x="114" y="211" class="mono">add R4,R1,R3</text>
+  <text x="66" y="240" class="label blockedText">R1 还没写好</text>
+  <text x="66" y="259" class="tiny">此前：load → R1</text>
+
+  <rect x="48" y="284" width="206" height="82" rx="13" fill="#083b32" stroke="#34d399" stroke-width="2.5"/>
+  <text x="66" y="311" class="h2 gpuText">W1</text>
+  <text x="114" y="309" class="mono">mul R2,R1,R5</text>
+  <text x="66" y="338" class="label readyText">操作数齐，可以发射</text>
+  <text x="66" y="357" class="tiny">这里的 R1 属于 W1</text>
+
+  <rect x="48" y="382" width="206" height="82" rx="13" fill="#172554" stroke="#a78bfa" stroke-width="2"/>
+  <text x="66" y="409" class="h2 gpuText">W2</text>
+  <text x="114" y="407" class="mono">add R7,R8,R9</text>
+  <text x="66" y="436" class="label">也已就绪</text>
+  <text x="66" y="455" class="tiny">等待调度选择</text>
+
+  <!-- Per-warp scoreboard -->
+  <rect x="308" y="105" width="322" height="385" rx="20" class="panel"/>
+  <text x="469" y="140" text-anchor="middle" class="h2">每个 Warp 自己的一本账</text>
+  <text x="469" y="164" text-anchor="middle" class="small">忙目的寄存器 / 依赖位</text>
+  <line x1="328" y1="190" x2="610" y2="190" class="divider"/>
+  <text x="347" y="181" class="tiny">上下文</text>
+  <text x="430" y="181" class="tiny">本 Warp 的依赖状态</text>
+  <text x="565" y="181" class="tiny">检查</text>
+
+  <rect x="328" y="198" width="282" height="76" rx="11" fill="#321d2a" stroke="#fb7185" stroke-width="2"/>
+  <text x="347" y="222" class="label gpuText">W0</text>
+  <text x="407" y="220" class="mono">dst R1 = pending</text>
+  <text x="347" y="246" class="small blockedText">load 发射时占住 R1 → 消费者 blocked</text>
+  <text x="347" y="266" class="tiny blockedText">仅 W0 的 load 返回才释放 W0:R1</text>
+
+  <rect x="328" y="283" width="282" height="76" rx="11" fill="#083b32" stroke="#34d399" stroke-width="2.5"/>
+  <text x="347" y="307" class="label gpuText">W1</text>
+  <text x="407" y="305" class="tiny">src R1 ready · dst R2 free</text>
+  <text x="347" y="333" class="small readyText">源已就绪；发射 W1 时占住 R2</text>
+  <text x="347" y="351" class="tiny readyText">MUL 写 R2 → eligible</text>
+
+  <rect x="328" y="368" width="282" height="73" rx="11" fill="#172554" stroke="#a78bfa" stroke-width="2"/>
+  <text x="347" y="394" class="label gpuText">W2</text>
+  <text x="407" y="392" class="mono">dst R7 = free</text>
+  <text x="347" y="420" class="small">无未就绪源 / 结构冲突 → eligible</text>
+
+  <path d="M274 227 L298 227" class="flow"/>
+  <path d="M274 325 L298 321" class="greenFlow"/>
+  <path d="M274 423 L298 404" class="flow"/>
+  <rect x="337" y="449" width="264" height="28" rx="9" fill="#4c1d2d"/>
+  <text x="469" y="469" text-anchor="middle" class="label">W0 的 R1 ≠ W1 的 R1</text>
+
+  <!-- Eligible set and scheduler -->
+  <rect x="664" y="105" width="172" height="385" rx="20" class="panel"/>
+  <text x="750" y="140" text-anchor="middle" class="h2">可发射集合</text>
+  <text x="750" y="164" text-anchor="middle" class="small">（eligible set）</text>
+  <rect x="686" y="204" width="128" height="49" rx="24" fill="#321d2a" stroke="#fb7185"/>
+  <text x="750" y="235" text-anchor="middle" class="label">W0 ✕</text>
+  <rect x="686" y="273" width="128" height="57" rx="28" fill="#064e3b" stroke="#34d399" stroke-width="2.5"/>
+  <text x="750" y="298" text-anchor="middle" class="label">W1 ✓</text>
+  <text x="750" y="318" text-anchor="middle" class="tiny">本周期获选</text>
+  <rect x="686" y="350" width="128" height="49" rx="24" fill="#172554" stroke="#a78bfa" stroke-width="2"/>
+  <text x="750" y="381" text-anchor="middle" class="label">W2 ✓</text>
+  <text x="750" y="438" text-anchor="middle" class="small">阻塞 W0 不会</text>
+  <text x="750" y="460" text-anchor="middle" class="small">拖住其他 Warp</text>
+  <path d="M630 236 L654 236" class="flow"/>
+  <path d="M630 319 L654 301" class="greenFlow"/>
+  <path d="M630 402 L654 375" class="flow"/>
+
+  <rect x="870" y="155" width="138" height="187" rx="20" fill="#312e81" stroke="#a78bfa" stroke-width="2.5"/>
+  <text x="939" y="197" text-anchor="middle" class="h2">Warp</text>
+  <text x="939" y="224" text-anchor="middle" class="h2">调度器</text>
+  <text x="939" y="260" text-anchor="middle" class="small">仲裁就绪项</text>
+  <rect x="891" y="282" width="96" height="42" rx="21" fill="#064e3b" stroke="#34d399"/>
+  <text x="939" y="309" text-anchor="middle" class="label">选择 W1</text>
+  <path d="M836 302 L860 277" class="greenFlow"/>
+
+  <!-- Execution pipelines and completion -->
+  <rect x="1038" y="105" width="134" height="385" rx="20" class="panel"/>
+  <text x="1105" y="140" text-anchor="middle" class="h2">执行流水线</text>
+  <rect x="1056" y="184" width="98" height="53" rx="11" fill="#064e3b" stroke="#34d399" stroke-width="2"/>
+  <text x="1105" y="216" text-anchor="middle" class="label">MUL</text>
+  <rect x="1056" y="252" width="98" height="53" rx="11" class="box"/>
+  <text x="1105" y="284" text-anchor="middle" class="label">ALU</text>
+  <rect x="1056" y="320" width="98" height="53" rx="11" class="box"/>
+  <text x="1105" y="343" text-anchor="middle" class="label">LD/ST</text>
+  <text x="1105" y="362" text-anchor="middle" class="tiny">内存返回</text>
+  <path d="M1008 303 C1020 303 1020 210 1028 210" class="greenFlow"/>
+  <text x="1105" y="412" text-anchor="middle" class="label readyText">W1 MUL 完成</text>
+  <text x="1105" y="440" text-anchor="middle" class="small">写回后清掉占用</text>
+  <path d="M1105 450 C1105 518 580 520 580 360" class="greenFlow"/>
+  <text x="818" y="510" text-anchor="middle" class="small"><tspan class="readyText">释放 W1 的 R2</tspan><tspan class="blockedText">；W0:R1 仍 pending</tspan></text>
+
+  <!-- Memory and implementation boundaries -->
+  <rect x="28" y="535" width="704" height="168" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-width="1.8"/>
+  <text x="50" y="570" class="h2 cpuText">寄存器依赖与跨 Warp 内存通信，是两件事</text>
+  <text x="50" y="603" class="label">• load 的目的寄存器仍会阻塞同一 Warp 内依赖它的消费者，直到数据就绪。</text>
+  <text x="50" y="634" class="label">• Warp 之间经共享 / 全局内存通信，需要显式同步与内存可见性保证。</text>
+  <text x="50" y="665" class="small">Scoreboard 不会从两个 Warp 的内存地址中自动推断跨 Warp 的数据依赖。</text>
+  <text x="50" y="689" class="small">程序必须用相应的同步原语建立正确的 happens-before 与可见性。</text>
+
+  <rect x="760" y="535" width="412" height="168" rx="18" fill="#0f172a" stroke="#fb7185" stroke-width="1.8"/>
+  <text x="782" y="570" class="h2 blockedText">实现边界</text>
+  <text x="782" y="604" class="label">这是解释性的 GPGPU-Sim 风格模型：</text>
+  <text x="782" y="634" class="small">reserve（占住）→ check（检查）→ release（释放）。</text>
+  <text x="782" y="665" class="small">它帮助理解语义，但不是已披露的当前 NVIDIA</text>
+  <text x="782" y="689" class="small">硬件模块、连线或逐周期实现细节。</text>
+
+  <text x="600" y="738" text-anchor="middle" class="label">等待发生在 W0 的上下文里；可继续的工作来自 W1、W2 等其他常驻上下文</text>
+  </g>
+
+  <g class="mobile">
+    <rect width="1200" height="760" fill="#111827"/>
+    <text x="600" y="66" text-anchor="middle" class="mTitle">GPU Scoreboard：每个 Warp 单独记账</text>
+
+    <rect x="42" y="105" width="1116" height="180" rx="28" fill="#321d2a" stroke="#fb7185" stroke-width="4"/>
+    <text x="80" y="158" class="mHead gpuText">W0：load 发射时占住自己的 R1</text>
+    <text x="80" y="210" class="mBody blockedText">R1 还没写好 → W0 的 add 被阻塞</text>
+    <text x="80" y="258" class="mBody">只有 W0 的 load 返回，才释放 W0:R1</text>
+
+    <rect x="42" y="315" width="1116" height="235" rx="28" fill="#083b32" stroke="#34d399" stroke-width="4"/>
+    <text x="80" y="368" class="mHead gpuText">W1：自己的 R1 已就绪，MUL 可以发射</text>
+    <rect x="78" y="410" width="270" height="82" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="4"/>
+    <text x="213" y="462" text-anchor="middle" class="mBody">发射 W1 MUL</text>
+    <path d="M363 451 L455 451" class="greenFlow"/>
+    <rect x="470" y="410" width="270" height="82" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="4"/>
+    <text x="605" y="462" text-anchor="middle" class="mBody">占住 W1:R2</text>
+    <path d="M755 451 L847 451" class="greenFlow"/>
+    <rect x="862" y="410" width="255" height="82" rx="18" fill="#064e3b" stroke="#34d399" stroke-width="4"/>
+    <text x="990" y="462" text-anchor="middle" class="mBody readyText">释放 W1 的 R2</text>
+    <text x="600" y="530" text-anchor="middle" class="mBody">W1 完成不会清掉 W0:R1</text>
+
+    <rect x="42" y="580" width="1116" height="146" rx="26" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+    <text x="600" y="630" text-anchor="middle" class="mHead blockedText">W0 的 R1 ≠ W1 的 R1</text>
+    <text x="600" y="676" text-anchor="middle" class="mBody">跨 Warp 内存通信需要显式同步与可见性</text>
+    <text x="600" y="715" text-anchor="middle" class="mBody">Scoreboard 不自动推断跨 Warp 内存依赖</text>
+  </g>
+</svg>

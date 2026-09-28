@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">完整位图与稀疏 GPR Range Scoreboard 对比</title>
+  <desc id="desc">同一组 R0 到 R3 以及 R5 的 pending 状态，左侧用完整位图表示，右侧用两个连续区间记录。下方展示读取 R2 的指令仍需在运行时和 pending 区间比较。</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #eef4ff; }
+      .bg { fill: #0b1020; }
+      .panel { fill: #151e34; stroke: #42557e; stroke-width: 2; }
+      .box { fill: #10182a; stroke: #60749e; stroke-width: 2; }
+      .pending { fill: #572b3a; stroke: #ff7b8f; stroke-width: 2; }
+      .ready { fill: #1d2a42; stroke: #526583; stroke-width: 1.5; }
+      .query { fill: #113d50; stroke: #4ed3f1; stroke-width: 2.5; }
+      .ok { fill: #123d35; stroke: #55d6a5; stroke-width: 2; }
+      .bad { fill: #512735; stroke: #ff7b8f; stroke-width: 2.5; }
+      .h1 { font-size: 34px; font-weight: 750; }
+      .h2 { font-size: 25px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #afbdd8; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 18px; }
+      .monoSmall { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
+      .coral { fill: #ff9aaa; }
+      .cyan { fill: #73ddf5; }
+      .green { fill: #74e3b6; }
+      .line { stroke: #8395bb; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .cyanLine { stroke: #4ed3f1; stroke-width: 3; fill: none; marker-end: url(#cyanArrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8395bb"/>
+    </marker>
+    <marker id="cyanArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#4ed3f1"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text class="h1" x="720" y="56" text-anchor="middle">同一笔 pending 状态，可以有两种记法</text>
+  <text class="small" x="720" y="88" text-anchor="middle">例：Warp 0 当前有 R0–R3 和 R5 尚未就绪</text>
+
+  <rect class="panel" x="48" y="122" width="650" height="440" rx="20"/>
+  <text class="h2" x="373" y="166" text-anchor="middle">完整 Bitmap</text>
+  <text class="small" x="373" y="196" text-anchor="middle">给整个 GPR 编号空间固定留位置</text>
+
+  <g>
+    <rect class="pending" x="82" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="114" y="273" text-anchor="middle">R0</text>
+    <rect class="pending" x="156" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="188" y="273" text-anchor="middle">R1</text>
+    <rect class="pending" x="230" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="262" y="273" text-anchor="middle">R2</text>
+    <rect class="pending" x="304" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="336" y="273" text-anchor="middle">R3</text>
+    <rect class="ready" x="378" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="410" y="273" text-anchor="middle">R4</text>
+    <rect class="pending" x="452" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="484" y="273" text-anchor="middle">R5</text>
+    <rect class="ready" x="526" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="558" y="273" text-anchor="middle">R6</text>
+    <rect class="ready" x="600" y="236" width="64" height="62" rx="8"/><text class="monoSmall" x="632" y="273" text-anchor="middle">R7</text>
+
+    <rect class="ready" x="82" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="114" y="349" text-anchor="middle">R8</text>
+    <rect class="ready" x="156" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="188" y="349" text-anchor="middle">R9</text>
+    <rect class="ready" x="230" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="262" y="349" text-anchor="middle">R10</text>
+    <rect class="ready" x="304" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="336" y="349" text-anchor="middle">R11</text>
+    <rect class="ready" x="378" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="410" y="349" text-anchor="middle">R12</text>
+    <rect class="ready" x="452" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="484" y="349" text-anchor="middle">R13</text>
+    <rect class="ready" x="526" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="558" y="349" text-anchor="middle">R14</text>
+    <rect class="ready" x="600" y="312" width="64" height="62" rx="8"/><text class="monoSmall" x="632" y="349" text-anchor="middle">R15</text>
+  </g>
+  <rect x="111" y="417" width="164" height="46" rx="12" fill="#572b3a"/><text class="body coral" x="193" y="447" text-anchor="middle">pending = 1</text>
+  <rect x="302" y="417" width="164" height="46" rx="12" fill="#1d2a42"/><text class="body" x="384" y="447" text-anchor="middle">ready = 0</text>
+  <text class="small" x="373" y="512" text-anchor="middle">编号空间变大时，大量 ready 位仍然占着位置</text>
+
+  <rect class="panel" x="742" y="122" width="650" height="440" rx="20"/>
+  <text class="h2" x="1067" y="166" text-anchor="middle">Sparse GPR Ranges</text>
+  <text class="small" x="1067" y="196" text-anchor="middle">只保存当前真正 pending 的连续区间</text>
+  <rect class="box" x="800" y="236" width="534" height="86" rx="14"/>
+  <text class="mono cyan" x="835" y="271">slot 0</text>
+  <text class="mono" x="975" y="271">base = R0</text>
+  <text class="mono" x="1160" y="271">count = 4</text>
+  <text class="small coral" x="1067" y="306" text-anchor="middle">覆盖 R0、R1、R2、R3</text>
+  <rect class="box" x="800" y="342" width="534" height="86" rx="14"/>
+  <text class="mono cyan" x="835" y="377">slot 1</text>
+  <text class="mono" x="975" y="377">base = R5</text>
+  <text class="mono" x="1160" y="377">count = 1</text>
+  <text class="small coral" x="1067" y="412" text-anchor="middle">只覆盖 R5</text>
+  <text class="small" x="1067" y="477" text-anchor="middle">连续目的寄存器只需保存起点与长度</text>
+  <text class="small" x="1067" y="512" text-anchor="middle">不连续集合需要多项，或采用另一种编码</text>
+
+  <rect class="panel" x="48" y="598" width="1344" height="246" rx="20"/>
+  <text class="h2" x="720" y="638" text-anchor="middle">状态压缩以后，发射路径仍要回答依赖问题</text>
+  <rect class="query" x="105" y="681" width="290" height="84" rx="15"/>
+  <text class="mono" x="250" y="716" text-anchor="middle">FADD R7, R2, R8</text>
+  <text class="small cyan" x="250" y="748" text-anchor="middle">source R2 被查询</text>
+  <path class="cyanLine" d="M395 723 L545 723"/>
+  <rect class="box" x="545" y="681" width="340" height="84" rx="15"/>
+  <text class="mono" x="715" y="717" text-anchor="middle">R2 ∈ [R0, R3] ?</text>
+  <text class="small" x="715" y="747" text-anchor="middle">与 pending range 比较</text>
+  <path class="line" d="M885 711 L1040 711"/>
+  <text class="small coral" x="963" y="697" text-anchor="middle">YES</text>
+  <rect class="bad" x="1040" y="676" width="270" height="74" rx="37"/>
+  <text class="h2 coral" x="1175" y="722" text-anchor="middle">BLOCKED</text>
+  <text class="body" x="720" y="813" text-anchor="middle"><tspan class="green">省的是状态</tspan><tspan>，不是运行时依赖检查</tspan></text>
+</svg>

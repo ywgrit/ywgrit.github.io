@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Nsight Compute 的 Long 与 Short Scoreboard 路径</title>
+  <desc id="desc">Long Scoreboard 指向 L1TEX 路径上的 global、local、surface、texture 依赖；Short Scoreboard 指向 MIO 路径，常见于 shared memory，也可能包括 MUFU、BRX、JMX。图中明确否定 Long 等于 HBM、Short 等于 cache hit 的简单映射。</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif; fill: #eef4ff; }
+      .bg { fill: #0b1020; }
+      .panel { fill: #151e34; stroke: #42557e; stroke-width: 2; }
+      .inner { fill: #10182a; stroke: #60749e; stroke-width: 1.8; }
+      .long { fill: #153348; stroke: #4eb8ef; stroke-width: 2.5; }
+      .short { fill: #193a34; stroke: #58d5aa; stroke-width: 2.5; }
+      .wrong { fill: #4d2934; stroke: #ff7b8f; stroke-width: 2; }
+      .h1 { font-size: 34px; font-weight: 750; }
+      .h2 { font-size: 25px; font-weight: 700; }
+      .h3 { font-size: 21px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 15px; fill: #afbdd8; }
+      .mono { font-family: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace; font-size: 18px; }
+      .blue { fill: #73cfff; }
+      .green { fill: #74e3b6; }
+      .coral { fill: #ff9aaa; }
+      .lineBlue { stroke: #4eb8ef; stroke-width: 3; fill: none; marker-end: url(#blueArrow); }
+      .lineGreen { stroke: #58d5aa; stroke-width: 3; fill: none; marker-end: url(#greenArrow); }
+      .cross { stroke: #ff7b8f; stroke-width: 5; stroke-linecap: round; }
+    </style>
+    <marker id="blueArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4eb8ef"/></marker>
+    <marker id="greenArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#58d5aa"/></marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text class="h1" x="720" y="56" text-anchor="middle">Long / Short 说的是等待路径，不是 cache 层级</text>
+  <text class="small" x="720" y="88" text-anchor="middle">先按 Nsight Compute 的 stall reason 找硬件路径，再结合访问模式判断根因</text>
+
+  <rect class="panel" x="48" y="124" width="650" height="544" rx="20"/>
+  <rect class="long" x="82" y="158" width="582" height="76" rx="16"/>
+  <text class="h2 blue" x="373" y="190" text-anchor="middle">Long Scoreboard</text>
+  <text class="small" x="373" y="216" text-anchor="middle">等待 L1TEX 路径上的数据依赖</text>
+  <rect class="inner" x="92" y="272" width="150" height="72" rx="13"/><text class="mono" x="167" y="316" text-anchor="middle">global</text>
+  <rect class="inner" x="262" y="272" width="150" height="72" rx="13"/><text class="mono" x="337" y="316" text-anchor="middle">local</text>
+  <rect class="inner" x="432" y="272" width="150" height="72" rx="13"/><text class="mono" x="507" y="316" text-anchor="middle">surface</text>
+  <rect class="inner" x="177" y="366" width="150" height="72" rx="13"/><text class="mono" x="252" y="410" text-anchor="middle">texture</text>
+  <path class="lineBlue" d="M337 438 L337 484"/>
+  <rect class="long" x="177" y="484" width="320" height="78" rx="16"/>
+  <text class="h3 blue" x="337" y="518" text-anchor="middle">L1TEX dependency</text>
+  <text class="small" x="337" y="545" text-anchor="middle">结果尚未满足 consumer</text>
+  <rect class="wrong" x="102" y="590" width="542" height="50" rx="12"/>
+  <text class="body coral" x="373" y="622" text-anchor="middle">Long Scoreboard ≠ “一定正在等 HBM”</text>
+
+  <rect class="panel" x="742" y="124" width="650" height="544" rx="20"/>
+  <rect class="short" x="776" y="158" width="582" height="76" rx="16"/>
+  <text class="h2 green" x="1067" y="190" text-anchor="middle">Short Scoreboard</text>
+  <text class="small" x="1067" y="216" text-anchor="middle">等待 MIO 路径上的数据依赖</text>
+  <rect class="inner" x="792" y="272" width="236" height="72" rx="13"/><text class="mono" x="910" y="305" text-anchor="middle">shared memory</text><text class="small" x="910" y="329" text-anchor="middle">常见来源</text>
+  <rect class="inner" x="1048" y="272" width="138" height="72" rx="13"/><text class="mono" x="1117" y="316" text-anchor="middle">MUFU</text>
+  <rect class="inner" x="1206" y="272" width="138" height="72" rx="13"/><text class="mono" x="1275" y="316" text-anchor="middle">BRX/JMX</text>
+  <path class="lineGreen" d="M1067 344 L1067 484"/>
+  <rect class="short" x="907" y="484" width="320" height="78" rx="16"/>
+  <text class="h3 green" x="1067" y="518" text-anchor="middle">MIO dependency</text>
+  <text class="small" x="1067" y="545" text-anchor="middle">结果尚未满足 consumer</text>
+  <rect class="wrong" x="796" y="590" width="542" height="50" rx="12"/>
+  <text class="body coral" x="1067" y="622" text-anchor="middle">Short Scoreboard ≠ “L1/L2 命中”</text>
+
+  <rect class="panel" x="48" y="706" width="1344" height="152" rx="20"/>
+  <text class="h3" x="175" y="753">接下来查什么</text>
+  <line x1="315" y1="728" x2="315" y2="838" stroke="#42557e" stroke-width="2"/>
+  <text class="body blue" x="350" y="748">Long</text>
+  <text class="body" x="430" y="748">访存合并、cache line 利用率、局部性、依赖距离</text>
+  <text class="body green" x="350" y="797">Short</text>
+  <text class="body" x="430" y="797">shared-memory bank conflict、MIO 指令吞吐与依赖距离</text>
+  <text class="small" x="720" y="837" text-anchor="middle">最后还要结合 Eligible Warps、No Eligible 和发射利用率：单个 Warp stall，不等于整个 Scheduler 空转</text>
+</svg>
