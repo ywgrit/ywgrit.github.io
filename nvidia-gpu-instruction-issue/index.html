@@ -32,7 +32,7 @@
 <meta property="og:image" content="https://ywgrit.work/img/architecture/nvidia-gpu-instruction-issue/hopper-gh100-figure4.png">
 <meta property="og:image" content="https://ywgrit.work/img/architecture/nvidia-gpu-instruction-issue/blackwell-ultra-figure2.png">
 <meta property="article:published_time" content="2026-09-27T16:00:00.000Z">
-<meta property="article:modified_time" content="2026-09-28T11:25:27.240Z">
+<meta property="article:modified_time" content="2026-09-28T11:28:24.083Z">
 <meta property="article:author" content="Yw">
 <meta property="article:tag" content="CPU">
 <meta property="article:tag" content="GPU">
@@ -253,7 +253,7 @@
         
         
         
-          125 分钟
+          126 分钟
         
       </span>
     
@@ -325,7 +325,7 @@
 <li><strong>in flight</strong>：指令已经发射，正在流水线或队列里，但结果还不一定能用。</li>
 <li><strong>consumer</strong>：会读取前面 producer（生产者）结果的后续指令。</li>
 </ul>
-<h3 id="selected-在-Nsight-里已经表示发射"><a href="#selected-在-Nsight-里已经表示发射" class="headerlink" title="selected 在 Nsight 里已经表示发射"></a><code>selected</code> 在 Nsight 里已经表示发射</h3><p>在 Nsight 的精确定义中，<code>selected</code> 表示已经 issued（我也不知道为什么要这样🤔）：</p>
+<h3 id="selected-在-Nsight-里已经表示发射"><a href="#selected-在-Nsight-里已经表示发射" class="headerlink" title="selected 在 Nsight 里已经表示发射"></a><code>selected</code> 在 Nsight 里已经表示发射</h3><p>在 Nsight 的精确定义中，<code>selected</code> 表示已经 issued（是否能够证明warp scheduler select warp和dispatcher 发射指令是不能分割的🤔）：</p>
 <ul>
 <li>在 <a target="_blank" rel="noopener" href="https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#sections-and-rules">Nsight Compute 的 Scheduler Statistics</a>模型中，Scheduler 选择一个 eligible warp，并从该 warp issue <strong>一条或多条</strong>指令。</li>
 <li>在 <a target="_blank" rel="noopener" href="https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#warp-stall-reasons">Warp Stall Reasons</a>的采样语义中，<code>selected</code> 明确定义为该 warp 被 micro scheduler 选中并已 issue 一条指令；<code>not_selected</code> 则是 warp 虽 eligible，但本周期选择了别的 warp。</li>
